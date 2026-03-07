@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0A0E1A;
+  --card: #111827;
+  --border: #1F2A3C;
+  --gold: #F5A623;
+  --muted: #6B7A99;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg);
+  color: #F9FAFB;
+  font-family: Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Glow effect for gold elements */
+.gold-glow {
+  box-shadow: 0 0 20px rgba(245, 166, 35, 0.2);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #F5A623 0%, #FBBF24 50%, #F59E0B 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Status badges */
+.badge-pending  { @apply bg-yellow-900/40 text-yellow-400 border border-yellow-800/50; }
+.badge-funded   { @apply bg-blue-900/40 text-blue-400 border border-blue-800/50; }
+.badge-paid     { @apply bg-green-900/40 text-green-400 border border-green-800/50; }
+.badge-defaulted { @apply bg-red-900/40 text-red-400 border border-red-800/50; }
