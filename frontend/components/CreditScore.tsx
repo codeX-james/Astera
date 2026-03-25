@@ -14,11 +14,11 @@ export default function CreditScore({ paid, funded, defaulted, totalVolume }: Pr
   const score = Math.round(300 + repaymentRate * 500 + volumeBonus);
 
   const scoreColor =
-    score >= 750 ? "text-green-400" : score >= 600 ? "text-yellow-400" : "text-red-400";
+    score >= 750 ? 'text-green-400' : score >= 600 ? 'text-yellow-400' : 'text-red-400';
   const scoreLabel =
-    score >= 750 ? "Excellent" : score >= 650 ? "Good" : score >= 550 ? "Fair" : "Building";
+    score >= 750 ? 'Excellent' : score >= 650 ? 'Good' : score >= 550 ? 'Fair' : 'Building';
 
-  const arc = Math.round((score - 300) / 550 * 180); // 0–180 degrees
+  const arc = Math.round(((score - 300) / 550) * 180); // 0–180 degrees
 
   return (
     <div className="p-6 bg-brand-card border border-brand-border rounded-2xl">

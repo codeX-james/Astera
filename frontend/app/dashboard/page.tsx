@@ -1,25 +1,13 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useStore } from "@/lib/store";
-import InvoiceCard from "@/components/InvoiceCard";
-import CreditScore from "@/components/CreditScore";
-import { getInvoice, getInvoiceCount } from "@/lib/contracts";
-import { formatUSDC } from "@/lib/stellar";
-import type { Invoice, InvoiceStatus } from "@/lib/types";
-
-type StatusFilter = "All" | InvoiceStatus;
-type SortOption = "newest" | "oldest" | "highest" | "due-soonest";
-
-const STATUS_TABS: StatusFilter[] = ["All", "Pending", "Funded", "Paid", "Defaulted"];
-
-const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: "newest", label: "Newest" },
-  { value: "oldest", label: "Oldest" },
-  { value: "highest", label: "Highest Amount" },
-  { value: "due-soonest", label: "Due Soonest" },
-];
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useStore } from '@/lib/store';
+import InvoiceCard from '@/components/InvoiceCard';
+import CreditScore from '@/components/CreditScore';
+import { getInvoice, getInvoiceCount } from '@/lib/contracts';
+import { formatUSDC } from '@/lib/stellar';
+import type { Invoice } from '@/lib/types';
 
 export default function DashboardPage() {
   const { wallet } = useStore();
@@ -51,7 +39,7 @@ export default function DashboardPage() {
       }
       setInvoices(all);
     } catch (e) {
-      setError("Failed to load invoices. Make sure contracts are deployed.");
+      setError('Failed to load invoices. Make sure contracts are deployed.');
       console.error(e);
     } finally {
       setLoading(false);
@@ -60,10 +48,10 @@ export default function DashboardPage() {
 
   const stats = {
     total: invoices.length,
-    pending: invoices.filter((i) => i.status === "Pending").length,
-    funded: invoices.filter((i) => i.status === "Funded").length,
-    paid: invoices.filter((i) => i.status === "Paid").length,
-    defaulted: invoices.filter((i) => i.status === "Defaulted").length,
+    pending: invoices.filter((i) => i.status === 'Pending').length,
+    funded: invoices.filter((i) => i.status === 'Funded').length,
+    paid: invoices.filter((i) => i.status === 'Paid').length,
+    defaulted: invoices.filter((i) => i.status === 'Defaulted').length,
     totalVolume: invoices.reduce((acc, i) => acc + i.amount, 0n),
   };
 
@@ -126,9 +114,7 @@ export default function DashboardPage() {
           <div className="flex flex-col items-center justify-center py-32 text-center">
             <div className="text-4xl mb-4">◈</div>
             <h2 className="text-xl font-semibold mb-2">Connect your wallet</h2>
-            <p className="text-brand-muted">
-              Connect Freighter to view and manage your invoices.
-            </p>
+            <p className="text-brand-muted">Connect Freighter to view and manage your invoices.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -137,14 +123,17 @@ export default function DashboardPage() {
               {/* Quick stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
-                  { label: "Total Volume", value: formatUSDC(stats.totalVolume), highlight: true },
-                  { label: "Pending", value: stats.pending.toString() },
-                  { label: "Funded", value: stats.funded.toString() },
-                  { label: "Paid", value: stats.paid.toString() },
+                  { label: 'Total Volume', value: formatUSDC(stats.totalVolume), highlight: true },
+                  { label: 'Pending', value: stats.pending.toString() },
+                  { label: 'Funded', value: stats.funded.toString() },
+                  { label: 'Paid', value: stats.paid.toString() },
                 ].map((s) => (
-                  <div key={s.label} className="p-4 bg-brand-card border border-brand-border rounded-xl">
+                  <div
+                    key={s.label}
+                    className="p-4 bg-brand-card border border-brand-border rounded-xl"
+                  >
                     <p className="text-xs text-brand-muted mb-1">{s.label}</p>
-                    <p className={`text-xl font-bold ${s.highlight ? "gradient-text" : ""}`}>
+                    <p className={`text-xl font-bold ${s.highlight ? 'gradient-text' : ''}`}>
                       {s.value}
                     </p>
                   </div>
@@ -221,7 +210,10 @@ export default function DashboardPage() {
                 {loading ? (
                   <div className="space-y-4">
                     {[1, 2, 3].map((n) => (
-                      <div key={n} className="h-32 bg-brand-card border border-brand-border rounded-2xl animate-pulse" />
+                      <div
+                        key={n}
+                        className="h-32 bg-brand-card border border-brand-border rounded-2xl animate-pulse"
+                      />
                     ))}
                   </div>
                 ) : error ? (

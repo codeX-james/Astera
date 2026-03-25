@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "prepare": "cd .. && git config core.hooksPath frontend/.husky"
   },
   "dependencies": {
     "@stellar/freighter-api": "^6.0.1",
@@ -20,9 +22,26 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@typescript-eslint/eslint-plugin": "^8.57.2",
+    "@typescript-eslint/parser": "^8.57.2",
     "autoprefixer": "^10",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.1",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "postcss": "^8",
+    "prettier": "^3.8.1",
     "tailwindcss": "^3",
     "typescript": "^5"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,jsx,mjs,json,css,md}": [
+      "prettier --write"
+    ]
   }
 }

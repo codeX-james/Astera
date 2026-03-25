@@ -1,33 +1,28 @@
-import type { Config } from "tailwindcss";
+import type { Config } from 'tailwindcss';
 
 const config: Config = {
-  content: [
-    "./app/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-    "./lib/**/*.{ts,tsx}",
-  ],
+  content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './lib/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
         brand: {
-          gold: "#F5A623",
-          amber: "#E8920A",
-          dark: "#0A0E1A",
-          navy: "#0D1526",
-          card: "#111827",
-          border: "#1F2A3C",
-          muted: "#6B7A99",
+          gold: '#F5A623',
+          amber: '#E8920A',
+          dark: '#0A0E1A',
+          navy: '#0D1526',
+          card: '#111827',
+          border: '#1F2A3C',
+          muted: '#6B7A99',
         },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       backgroundImage: {
-        "grid-pattern":
-          "radial-gradient(circle at 1px 1px, #1F2A3C 1px, transparent 0)",
+        'grid-pattern': 'radial-gradient(circle at 1px 1px, #1F2A3C 1px, transparent 0)',
       },
       backgroundSize: {
-        grid: "40px 40px",
+        grid: '40px 40px',
       },
     },
   },

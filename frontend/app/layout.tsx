@@ -1,15 +1,15 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import Navbar from "@/components/Navbar";
+import type { Metadata } from 'next';
+import './globals.css';
+import Navbar from '@/components/Navbar';
 
 export const metadata: Metadata = {
-  title: "Astera — Real World Assets on Stellar",
+  title: 'Astera — Real World Assets on Stellar',
   description:
-    "Tokenize invoices. Fund real businesses. Earn on-chain yield. Built on Stellar Soroban.",
+    'Tokenize invoices. Fund real businesses. Earn on-chain yield. Built on Stellar Soroban.',
   openGraph: {
-    title: "Astera",
-    description: "Invoice financing for emerging markets, powered by Stellar.",
-    siteName: "Astera",
+    title: 'Astera',
+    description: 'Invoice financing for emerging markets, powered by Stellar.',
+    siteName: 'Astera',
   },
 };
 

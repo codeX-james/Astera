@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import { getInvoice } from "@/lib/contracts";
-import { formatUSDC, formatDate, daysUntil } from "@/lib/stellar";
-import type { Invoice } from "@/lib/types";
-import { useStore } from "@/lib/store";
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { getInvoice } from '@/lib/contracts';
+import { formatUSDC, formatDate, daysUntil } from '@/lib/stellar';
+import type { Invoice } from '@/lib/types';
+import { useStore } from '@/lib/store';
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,7 +24,7 @@ export default function InvoiceDetailPage() {
       const inv = await getInvoice(parseInt(id));
       setInvoice(inv);
     } catch (e) {
-      setError("Invoice not found or contracts not deployed.");
+      setError('Invoice not found or contracts not deployed.');
       console.error(e);
     } finally {
       setLoading(false);
@@ -46,7 +46,7 @@ export default function InvoiceDetailPage() {
   if (error || !invoice) {
     return (
       <div className="min-h-screen pt-24 px-6 flex flex-col items-center justify-center text-center">
-        <p className="text-red-400 mb-4">{error ?? "Invoice not found."}</p>
+        <p className="text-red-400 mb-4">{error ?? 'Invoice not found.'}</p>
         <Link href="/dashboard" className="text-brand-gold hover:underline text-sm">
           Back to Dashboard
         </Link>
@@ -58,16 +58,19 @@ export default function InvoiceDetailPage() {
   const isOwner = wallet.address === invoice.owner;
 
   const timeline = [
-    { label: "Created", ts: invoice.createdAt, done: true },
-    { label: "Funded", ts: invoice.fundedAt, done: invoice.status !== "Pending" },
-    { label: "Paid", ts: invoice.paidAt, done: invoice.status === "Paid" },
+    { label: 'Created', ts: invoice.createdAt, done: true },
+    { label: 'Funded', ts: invoice.fundedAt, done: invoice.status !== 'Pending' },
+    { label: 'Paid', ts: invoice.paidAt, done: invoice.status === 'Paid' },
   ];
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-6">
       <div className="max-w-2xl mx-auto">
         {/* Back */}
-        <Link href="/dashboard" className="text-brand-muted hover:text-white text-sm mb-6 inline-flex items-center gap-2 transition-colors">
+        <Link
+          href="/dashboard"
+          className="text-brand-muted hover:text-white text-sm mb-6 inline-flex items-center gap-2 transition-colors"
+        >
           ← Back to Dashboard
         </Link>
 
@@ -85,9 +88,7 @@ export default function InvoiceDetailPage() {
             </span>
           </div>
 
-          <div className="text-4xl font-bold gradient-text mb-6">
-            {formatUSDC(invoice.amount)}
-          </div>
+          <div className="text-4xl font-bold gradient-text mb-6">{formatUSDC(invoice.amount)}</div>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
@@ -98,7 +99,7 @@ export default function InvoiceDetailPage() {
               <p className="text-brand-muted mb-1">Time Remaining</p>
               <p
                 className={`font-medium ${
-                  days < 0 ? "text-red-400" : days <= 7 ? "text-yellow-400" : "text-white"
+                  days < 0 ? 'text-red-400' : days <= 7 ? 'text-yellow-400' : 'text-white'
                 }`}
               >
                 {days < 0 ? `${Math.abs(days)} days overdue` : `${days} days`}
@@ -125,15 +126,13 @@ export default function InvoiceDetailPage() {
               <div key={step.label} className="flex items-center gap-4">
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
-                    step.done
-                      ? "bg-brand-gold text-brand-dark"
-                      : "bg-brand-border text-brand-muted"
+                    step.done ? 'bg-brand-gold text-brand-dark' : 'bg-brand-border text-brand-muted'
                   }`}
                 >
-                  {step.done ? "✓" : i + 1}
+                  {step.done ? '✓' : i + 1}
                 </div>
                 <div className="flex-1 flex justify-between">
-                  <span className={step.done ? "text-white font-medium" : "text-brand-muted"}>
+                  <span className={step.done ? 'text-white font-medium' : 'text-brand-muted'}>
                     {step.label}
                   </span>
                   {step.done && step.ts > 0 && (
@@ -146,9 +145,10 @@ export default function InvoiceDetailPage() {
         </div>
 
         {/* Actions */}
-        {isOwner && invoice.status === "Pending" && (
+        {isOwner && invoice.status === 'Pending' && (
           <div className="p-4 bg-brand-gold/10 border border-brand-gold/20 rounded-xl text-sm text-brand-muted">
-            Your invoice is pending review. Once approved, the pool will fund it and USDC will be sent to your wallet.
+            Your invoice is pending review. Once approved, the pool will fund it and USDC will be
+            sent to your wallet.
           </div>
         )}
       </div>

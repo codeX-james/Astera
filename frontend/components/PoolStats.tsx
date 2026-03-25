@@ -1,5 +1,5 @@
-import type { PoolConfig } from "@/lib/types";
-import { formatUSDC } from "@/lib/stellar";
+import type { PoolConfig } from '@/lib/types';
+import { formatUSDC } from '@/lib/stellar';
 
 interface Props {
   config: PoolConfig;
@@ -7,9 +7,7 @@ interface Props {
 
 export default function PoolStats({ config }: Props) {
   const utilizationRate =
-    config.totalDeposited > 0n
-      ? Number((config.totalDeployed * 100n) / config.totalDeposited)
-      : 0;
+    config.totalDeposited > 0n ? Number((config.totalDeployed * 100n) / config.totalDeposited) : 0;
 
   const apy = (config.yieldBps / 100).toFixed(1);
 
@@ -20,7 +18,11 @@ export default function PoolStats({ config }: Props) {
       <div className="grid grid-cols-2 gap-4 mb-6">
         <Stat label="Total Deposited" value={formatUSDC(config.totalDeposited)} />
         <Stat label="Deployed" value={formatUSDC(config.totalDeployed)} />
-        <Stat label="Available" value={formatUSDC(config.totalDeposited - config.totalDeployed)} highlight />
+        <Stat
+          label="Available"
+          value={formatUSDC(config.totalDeposited - config.totalDeployed)}
+          highlight
+        />
         <Stat label="Total Paid Out" value={formatUSDC(config.totalPaidOut)} />
       </div>
 
@@ -49,7 +51,7 @@ function Stat({ label, value, highlight }: { label: string; value: string; highl
   return (
     <div className="p-3 bg-brand-dark rounded-xl border border-brand-border">
       <p className="text-xs text-brand-muted mb-1">{label}</p>
-      <p className={`font-semibold text-sm ${highlight ? "text-brand-gold" : "text-white"}`}>
+      <p className={`font-semibold text-sm ${highlight ? 'text-brand-gold' : 'text-white'}`}>
         {value}
       </p>
     </div>

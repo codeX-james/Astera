@@ -8,16 +8,16 @@ import {
   nativeToScVal,
   Address,
   xdr,
-} from "@stellar/stellar-sdk";
+} from '@stellar/stellar-sdk';
 
 export const NETWORK = Networks.TESTNET;
-export const RPC_URL = "https://soroban-testnet.stellar.org";
-export const HORIZON_URL = "https://horizon-testnet.stellar.org";
+export const RPC_URL = 'https://soroban-testnet.stellar.org';
+export const HORIZON_URL = 'https://horizon-testnet.stellar.org';
 
 // Set these after deploying your contracts
-export const INVOICE_CONTRACT_ID = process.env.NEXT_PUBLIC_INVOICE_CONTRACT_ID ?? "";
-export const POOL_CONTRACT_ID = process.env.NEXT_PUBLIC_POOL_CONTRACT_ID ?? "";
-export const USDC_TOKEN_ID = process.env.NEXT_PUBLIC_USDC_TOKEN_ID ?? "";
+export const INVOICE_CONTRACT_ID = process.env.NEXT_PUBLIC_INVOICE_CONTRACT_ID ?? '';
+export const POOL_CONTRACT_ID = process.env.NEXT_PUBLIC_POOL_CONTRACT_ID ?? '';
+export const USDC_TOKEN_ID = process.env.NEXT_PUBLIC_USDC_TOKEN_ID ?? '';
 
 export const rpc = new StellarRpc.Server(RPC_URL);
 
@@ -33,19 +33,19 @@ export function fromStroops(stroops: bigint): number {
 
 /** Format a stroops bigint as a USD string */
 export function formatUSDC(stroops: bigint): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 2,
   }).format(fromStroops(stroops));
 }
 
 /** Format a unix timestamp as a readable date */
 export function formatDate(ts: number): string {
-  return new Date(ts * 1000).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
+  return new Date(ts * 1000).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
   });
 }
 
@@ -56,7 +56,7 @@ export function daysUntil(ts: number): number {
 
 /** Truncate a Stellar address for display */
 export function truncateAddress(addr: string): string {
-  if (!addr) return "";
+  if (!addr) return '';
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
 
@@ -65,7 +65,7 @@ export async function simulateTx(
   contractId: string,
   method: string,
   args: xdr.ScVal[],
-  sourceAddress: string
+  sourceAddress: string,
 ): Promise<StellarRpc.Api.SimulateTransactionResponse> {
   const account = await rpc.getAccount(sourceAddress);
   const contract = new Contract(contractId);
@@ -86,7 +86,7 @@ export async function submitTx(signedXDR: string) {
   const tx = TransactionBuilder.fromXDR(signedXDR, NETWORK);
   const response = await rpc.sendTransaction(tx);
 
-  if (response.status === "ERROR") {
+  if (response.status === 'ERROR') {
     throw new Error(`Transaction failed: ${JSON.stringify(response)}`);
   }
 
@@ -94,14 +94,14 @@ export async function submitTx(signedXDR: string) {
   let result = await rpc.getTransaction(response.hash);
   let attempts = 0;
 
-  while (result.status === "NOT_FOUND" && attempts < 20) {
+  while (result.status === 'NOT_FOUND' && attempts < 20) {
     await new Promise((r) => setTimeout(r, 1500));
     result = await rpc.getTransaction(response.hash);
     attempts++;
   }
 
-  if (result.status === "FAILED") {
-    throw new Error("Transaction failed on-chain");
+  if (result.status === 'FAILED') {
+    throw new Error('Transaction failed on-chain');
   }
 
   return result;

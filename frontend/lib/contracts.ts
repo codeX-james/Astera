@@ -8,24 +8,19 @@ import {
   nativeToScVal,
   scValToNative,
   Address,
-} from "./stellar";
-import {
-  TransactionBuilder,
-  BASE_FEE,
-  Contract,
-  rpc as StellarRpc,
-} from "@stellar/stellar-sdk";
-import type { Invoice, InvestorPosition, PoolConfig, FundedInvoice } from "./types";
+} from './stellar';
+import { TransactionBuilder, BASE_FEE, Contract, rpc as StellarRpc } from '@stellar/stellar-sdk';
+import type { Invoice, InvestorPosition, PoolConfig, FundedInvoice } from './types';
 
 // ---- Invoice Contract ----
 
 export async function getInvoice(id: number): Promise<Invoice> {
   const sim = await simulateTx(
     INVOICE_CONTRACT_ID,
-    "get_invoice",
-    [nativeToScVal(id, { type: "u64" })],
+    'get_invoice',
+    [nativeToScVal(id, { type: 'u64' })],
     // read-only — use a zero address placeholder
-    "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN"
+    'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
   );
 
   const result = (sim as StellarRpc.Api.SimulateTransactionSuccessResponse).result;
@@ -35,9 +30,9 @@ export async function getInvoice(id: number): Promise<Invoice> {
 export async function getInvoiceCount(): Promise<number> {
   const sim = await simulateTx(
     INVOICE_CONTRACT_ID,
-    "get_invoice_count",
+    'get_invoice_count',
     [],
-    "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN"
+    'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
   );
 
   const result = (sim as StellarRpc.Api.SimulateTransactionSuccessResponse).result;
@@ -60,13 +55,13 @@ export async function buildCreateInvoiceTx(params: {
   })
     .addOperation(
       contract.call(
-        "create_invoice",
+        'create_invoice',
         new Address(params.owner).toScVal(),
-        nativeToScVal(params.debtor, { type: "string" }),
-        nativeToScVal(params.amount, { type: "i128" }),
-        nativeToScVal(params.dueDate, { type: "u64" }),
-        nativeToScVal(params.description, { type: "string" })
-      )
+        nativeToScVal(params.debtor, { type: 'string' }),
+        nativeToScVal(params.amount, { type: 'i128' }),
+        nativeToScVal(params.dueDate, { type: 'u64' }),
+        nativeToScVal(params.description, { type: 'string' }),
+      ),
     )
     .setTimeout(30)
     .build();
@@ -85,9 +80,9 @@ export async function buildCreateInvoiceTx(params: {
 export async function getPoolConfig(): Promise<PoolConfig> {
   const sim = await simulateTx(
     POOL_CONTRACT_ID,
-    "get_config",
+    'get_config',
     [],
-    "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN"
+    'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
   );
 
   const result = (sim as StellarRpc.Api.SimulateTransactionSuccessResponse).result;
@@ -104,14 +99,12 @@ export async function getPoolConfig(): Promise<PoolConfig> {
   };
 }
 
-export async function getInvestorPosition(
-  investor: string
-): Promise<InvestorPosition | null> {
+export async function getInvestorPosition(investor: string): Promise<InvestorPosition | null> {
   const sim = await simulateTx(
     POOL_CONTRACT_ID,
-    "get_position",
+    'get_position',
     [new Address(investor).toScVal()],
-    "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN"
+    'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
   );
 
   const result = (sim as StellarRpc.Api.SimulateTransactionSuccessResponse).result;
@@ -138,10 +131,10 @@ export async function buildDepositTx(investor: string, amount: bigint): Promise<
   })
     .addOperation(
       contract.call(
-        "deposit",
+        'deposit',
         new Address(investor).toScVal(),
-        nativeToScVal(amount, { type: "i128" })
-      )
+        nativeToScVal(amount, { type: 'i128' }),
+      ),
     )
     .setTimeout(30)
     .build();
@@ -165,10 +158,10 @@ export async function buildWithdrawTx(investor: string, amount: bigint): Promise
   })
     .addOperation(
       contract.call(
-        "withdraw",
+        'withdraw',
         new Address(investor).toScVal(),
-        nativeToScVal(amount, { type: "i128" })
-      )
+        nativeToScVal(amount, { type: 'i128' }),
+      ),
     )
     .setTimeout(30)
     .build();

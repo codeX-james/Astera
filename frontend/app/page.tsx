@@ -1,55 +1,70 @@
-import Link from "next/link";
+import Link from 'next/link';
 
 const stats = [
-  { label: "Trade Finance Gap", value: "$1.7T", sub: "in emerging markets" },
-  { label: "Settlement Time", value: "3-5s", sub: "on Stellar network" },
-  { label: "Target APY", value: "8%", sub: "for pool investors" },
-  { label: "Transaction Fee", value: "<$0.01", sub: "per operation" },
+  { label: 'Trade Finance Gap', value: '$1.7T', sub: 'in emerging markets' },
+  { label: 'Settlement Time', value: '3-5s', sub: 'on Stellar network' },
+  { label: 'Target APY', value: '8%', sub: 'for pool investors' },
+  { label: 'Transaction Fee', value: '<$0.01', sub: 'per operation' },
 ];
 
 const features = [
   {
-    icon: "◈",
-    title: "Tokenize Invoices",
+    icon: '◈',
+    title: 'Tokenize Invoices',
     description:
-      "SMEs mint unpaid invoices as Soroban-based RWA tokens in minutes. No paperwork, no banks, no middlemen.",
+      'SMEs mint unpaid invoices as Soroban-based RWA tokens in minutes. No paperwork, no banks, no middlemen.',
   },
   {
-    icon: "◉",
-    title: "Instant Liquidity",
+    icon: '◉',
+    title: 'Instant Liquidity',
     description:
-      "Community investors fund invoice pools. Working capital reaches businesses within the same transaction.",
+      'Community investors fund invoice pools. Working capital reaches businesses within the same transaction.',
   },
   {
-    icon: "◎",
-    title: "Smart Escrow",
+    icon: '◎',
+    title: 'Smart Escrow',
     description:
-      "Soroban contracts handle payment release automatically when invoices are settled. Zero trust required.",
+      'Soroban contracts handle payment release automatically when invoices are settled. Zero trust required.',
   },
   {
-    icon: "◐",
-    title: "On-Chain Credit",
+    icon: '◐',
+    title: 'On-Chain Credit',
     description:
-      "Every paid invoice builds a verifiable credit history on Stellar — a credit score earned through real work.",
+      'Every paid invoice builds a verifiable credit history on Stellar — a credit score earned through real work.',
   },
   {
-    icon: "◑",
-    title: "USDC Settlement",
+    icon: '◑',
+    title: 'USDC Settlement',
     description:
-      "All transactions settle in native USDC on Stellar. No bridging risk, no price volatility for business ops.",
+      'All transactions settle in native USDC on Stellar. No bridging risk, no price volatility for business ops.',
   },
   {
-    icon: "◒",
-    title: "Diaspora Investing",
+    icon: '◒',
+    title: 'Diaspora Investing',
     description:
-      "Remittance senders can now invest in businesses back home — turning payments into productive capital.",
+      'Remittance senders can now invest in businesses back home — turning payments into productive capital.',
   },
 ];
 
 const steps = [
-  { n: "01", role: "SME", title: "Tokenize your invoice", desc: "Connect Freighter, upload invoice details, mint it as an on-chain RWA token." },
-  { n: "02", role: "Pool", title: "Invoice gets funded", desc: "Astera's liquidity pool reviews and funds the invoice. USDC hits your wallet instantly." },
-  { n: "03", role: "Investor", title: "Earn yield", desc: "When your customer pays, principal + interest flows to investors. SME builds credit history." },
+  {
+    n: '01',
+    role: 'SME',
+    title: 'Tokenize your invoice',
+    desc: 'Connect Freighter, upload invoice details, mint it as an on-chain RWA token.',
+  },
+  {
+    n: '02',
+    role: 'Pool',
+    title: 'Invoice gets funded',
+    desc: "Astera's liquidity pool reviews and funds the invoice. USDC hits your wallet instantly.",
+  },
+  {
+    n: '03',
+    role: 'Investor',
+    title: 'Earn yield',
+    desc: 'When your customer pays, principal + interest flows to investors. SME builds credit history.',
+  },
 ];
 
 export default function Home() {
@@ -61,8 +76,8 @@ export default function Home() {
         <div
           className="absolute inset-0 opacity-20"
           style={{
-            backgroundImage: "radial-gradient(circle at 1px 1px, #1F2A3C 1px, transparent 0)",
-            backgroundSize: "40px 40px",
+            backgroundImage: 'radial-gradient(circle at 1px 1px, #1F2A3C 1px, transparent 0)',
+            backgroundSize: '40px 40px',
           }}
         />
         {/* Radial glow */}
@@ -75,15 +90,14 @@ export default function Home() {
           </div>
 
           <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-6">
-            Real invoices.{" "}
-            <span className="gradient-text">Real yield.</span>
+            Real invoices. <span className="gradient-text">Real yield.</span>
             <br />
             Real impact.
           </h1>
 
           <p className="text-xl text-brand-muted max-w-2xl mx-auto mb-12 leading-relaxed">
-            Astera tokenizes SME invoices as on-chain assets on Stellar. Businesses in
-            emerging markets access working capital instantly. Investors earn verified yield.
+            Astera tokenizes SME invoices as on-chain assets on Stellar. Businesses in emerging
+            markets access working capital instantly. Investors earn verified yield.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -121,7 +135,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              The infrastructure layer for{" "}
+              The infrastructure layer for{' '}
               <span className="gradient-text">emerging market finance</span>
             </h2>
             <p className="text-brand-muted max-w-xl mx-auto">
@@ -156,7 +170,10 @@ export default function Home() {
 
           <div className="space-y-6">
             {steps.map((s, i) => (
-              <div key={s.n} className="flex gap-6 p-6 bg-brand-card border border-brand-border rounded-2xl">
+              <div
+                key={s.n}
+                className="flex gap-6 p-6 bg-brand-card border border-brand-border rounded-2xl"
+              >
                 <div className="flex-shrink-0 w-12 h-12 rounded-full bg-brand-gold/10 border border-brand-gold/30 flex items-center justify-center text-brand-gold font-bold text-sm">
                   {s.n}
                 </div>
@@ -197,8 +214,12 @@ export default function Home() {
           <div className="font-semibold text-white">Astera</div>
           <div>Built on Stellar · Powered by Soroban · USDC Settlement</div>
           <div className="flex gap-6">
-            <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
-            <Link href="/invest" className="hover:text-white transition-colors">Invest</Link>
+            <Link href="/dashboard" className="hover:text-white transition-colors">
+              Dashboard
+            </Link>
+            <Link href="/invest" className="hover:text-white transition-colors">
+              Invest
+            </Link>
           </div>
         </div>
       </footer>

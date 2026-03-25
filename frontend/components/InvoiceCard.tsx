@@ -1,16 +1,16 @@
-import type { Invoice } from "@/lib/types";
-import { formatUSDC, formatDate, daysUntil } from "@/lib/stellar";
-import Link from "next/link";
+import type { Invoice } from '@/lib/types';
+import { formatUSDC, formatDate, daysUntil } from '@/lib/stellar';
+import Link from 'next/link';
 
 interface Props {
   invoice: Invoice;
 }
 
 const statusLabel: Record<string, string> = {
-  Pending: "Pending",
-  Funded: "Funded",
-  Paid: "Paid",
-  Defaulted: "Defaulted",
+  Pending: 'Pending',
+  Funded: 'Funded',
+  Paid: 'Paid',
+  Defaulted: 'Defaulted',
 };
 
 export default function InvoiceCard({ invoice }: Props) {
@@ -44,11 +44,7 @@ export default function InvoiceCard({ invoice }: Props) {
         </div>
         <div
           className={
-            isOverdue
-              ? "text-red-400"
-              : days <= 7
-              ? "text-yellow-400"
-              : "text-brand-muted"
+            isOverdue ? 'text-red-400' : days <= 7 ? 'text-yellow-400' : 'text-brand-muted'
           }
         >
           {isOverdue ? `${Math.abs(days)}d overdue` : `${days}d left`}
