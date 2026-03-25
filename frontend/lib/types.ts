@@ -36,6 +36,7 @@ export interface FundedInvoice {
   invoiceId: number;
   sme: string;
   principal: bigint;
+  committed: bigint;
   fundedAt: number;
   dueDate: number;
   repaid: boolean;

@@ -148,6 +148,100 @@ export async function buildDepositTx(investor: string, amount: bigint): Promise<
   return prepared.toXDR();
 }
 
+export async function getFundedInvoice(
+  invoiceId: number
+): Promise<FundedInvoice | null> {
+  const sim = await simulateTx(
+    POOL_CONTRACT_ID,
+    "get_funded_invoice",
+    [nativeToScVal(invoiceId, { type: "u64" })],
+    "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN"
+  );
+
+  const result = (sim as StellarRpc.Api.SimulateTransactionSuccessResponse).result;
+  const raw = scValToNative(result!.retval);
+  if (!raw) return null;
+
+  const r = raw as Record<string, unknown>;
+  return {
+    invoiceId: Number(r.invoice_id),
+    sme: r.sme as string,
+    principal: BigInt(r.principal as string),
+    committed: BigInt(r.committed as string),
+    fundedAt: Number(r.funded_at),
+    dueDate: Number(r.due_date),
+    repaid: Boolean(r.repaid),
+  };
+}
+
+export async function buildInitCoFundingTx(params: {
+  admin: string;
+  invoiceId: number;
+  principal: bigint;
+  sme: string;
+  dueDate: number;
+}): Promise<string> {
+  const account = await rpc.getAccount(params.admin);
+  const contract = new Contract(POOL_CONTRACT_ID);
+
+  const tx = new TransactionBuilder(account, {
+    fee: BASE_FEE,
+    networkPassphrase: NETWORK,
+  })
+    .addOperation(
+      contract.call(
+        "init_co_funding",
+        new Address(params.admin).toScVal(),
+        nativeToScVal(params.invoiceId, { type: "u64" }),
+        nativeToScVal(params.principal, { type: "i128" }),
+        new Address(params.sme).toScVal(),
+        nativeToScVal(params.dueDate, { type: "u64" })
+      )
+    )
+    .setTimeout(30)
+    .build();
+
+  const sim = await rpc.simulateTransaction(tx);
+  if (StellarRpc.Api.isSimulationError(sim)) {
+    throw new Error(`Simulation failed: ${sim.error}`);
+  }
+
+  const prepared = StellarRpc.assembleTransaction(tx, sim).build();
+  return prepared.toXDR();
+}
+
+export async function buildCommitToInvoiceTx(params: {
+  investor: string;
+  invoiceId: number;
+  amount: bigint;
+}): Promise<string> {
+  const account = await rpc.getAccount(params.investor);
+  const contract = new Contract(POOL_CONTRACT_ID);
+
+  const tx = new TransactionBuilder(account, {
+    fee: BASE_FEE,
+    networkPassphrase: NETWORK,
+  })
+    .addOperation(
+      contract.call(
+        "commit_to_invoice",
+        new Address(params.investor).toScVal(),
+        nativeToScVal(params.invoiceId, { type: "u64" }),
+        nativeToScVal(params.amount, { type: "i128" })
+      )
+    )
+    .setTimeout(30)
+    .build();
+
+  const sim = await rpc.simulateTransaction(tx);
+  if (StellarRpc.Api.isSimulationError(sim)) {
+    throw new Error(`Simulation failed: ${sim.error}`);
+  }
+
+  const prepared = StellarRpc.assembleTransaction(tx, sim).build();
+  return prepared.toXDR();
+}
+
 export async function buildWithdrawTx(investor: string, amount: bigint): Promise<string> {
   const account = await rpc.getAccount(investor);
   const contract = new Contract(POOL_CONTRACT_ID);

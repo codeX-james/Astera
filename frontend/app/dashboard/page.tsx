@@ -12,6 +12,7 @@ import type { Invoice } from '@/lib/types';
 export default function DashboardPage() {
   const { wallet } = useStore();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [committedMap, setCommittedMap] = useState<Record<number, bigint>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +39,22 @@ export default function DashboardPage() {
         if (inv.owner === wallet.address) all.push(inv);
       }
       setInvoices(all);
+
+      // Fetch co-funding progress for pending invoices
+      const committed: Record<number, bigint> = {};
+      await Promise.all(
+        all
+          .filter((inv) => inv.status === "Pending")
+          .map(async (inv) => {
+            try {
+              const record = await getFundedInvoice(inv.id);
+              if (record) committed[inv.id] = record.committed;
+            } catch {
+              // Not registered for co-funding yet — leave uncommitted
+            }
+          })
+      );
+      setCommittedMap(committed);
     } catch (e) {
       setError('Failed to load invoices. Make sure contracts are deployed.');
       console.error(e);
@@ -244,8 +261,12 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {filtered.map((inv) => (
-                      <InvoiceCard key={inv.id} invoice={inv} />
+                    {invoices.map((inv) => (
+                      <InvoiceCard
+                        key={inv.id}
+                        invoice={inv}
+                        fundedAmount={committedMap[inv.id]}
+                      />
                     ))}
                   </div>
                 )}

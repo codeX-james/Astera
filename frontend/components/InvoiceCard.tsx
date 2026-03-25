@@ -4,6 +4,8 @@ import Link from 'next/link';
 
 interface Props {
   invoice: Invoice;
+  /** Amount committed toward this invoice so far (only relevant for Pending invoices) */
+  fundedAmount?: bigint;
 }
 
 const statusLabel: Record<string, string> = {
@@ -13,9 +15,18 @@ const statusLabel: Record<string, string> = {
   Defaulted: 'Defaulted',
 };
 
-export default function InvoiceCard({ invoice }: Props) {
+export default function InvoiceCard({ invoice, fundedAmount }: Props) {
   const days = daysUntil(invoice.dueDate);
   const isOverdue = days < 0;
+
+  const showProgress =
+    invoice.status === "Pending" &&
+    fundedAmount !== undefined &&
+    invoice.amount > 0n;
+
+  const fundedPercent = showProgress
+    ? Number((fundedAmount! * 10_000n) / invoice.amount) / 100
+    : 0;
 
   return (
     <Link
@@ -50,6 +61,31 @@ export default function InvoiceCard({ invoice }: Props) {
           {isOverdue ? `${Math.abs(days)}d overdue` : `${days}d left`}
         </div>
       </div>
+
+      {showProgress && (
+        <div className="mt-4 border-t border-brand-border pt-4">
+          <div className="flex items-center justify-between text-xs text-brand-muted mb-1.5">
+            <span>Co-funding progress</span>
+            <span className="text-white font-medium">
+              {fundedPercent.toFixed(1)}%
+            </span>
+          </div>
+          <div className="h-1.5 bg-brand-border rounded-full overflow-hidden">
+            <div
+              className="h-full bg-brand-gold rounded-full transition-all duration-300"
+              style={{ width: `${Math.min(100, fundedPercent)}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-xs mt-1.5">
+            <span className="text-brand-muted">
+              {formatUSDC(fundedAmount!)} committed
+            </span>
+            <span className="text-brand-muted">
+              {formatUSDC(invoice.amount - fundedAmount!)} remaining
+            </span>
+          </div>
+        </div>
+      )}
 
       {invoice.description && (
         <p className="mt-3 text-xs text-brand-muted line-clamp-2 border-t border-brand-border pt-3">
