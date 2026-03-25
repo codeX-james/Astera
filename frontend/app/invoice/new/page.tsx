@@ -1,20 +1,20 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useStore } from "@/lib/store";
-import { buildCreateInvoiceTx, submitTx } from "@/lib/contracts";
-import { toStroops } from "@/lib/stellar";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useStore } from '@/lib/store';
+import { buildCreateInvoiceTx, submitTx } from '@/lib/contracts';
+import { toStroops } from '@/lib/stellar';
 
 export default function NewInvoicePage() {
   const { wallet } = useStore();
   const router = useRouter();
 
   const [form, setForm] = useState({
-    debtor: "",
-    amount: "",
-    dueDate: "",
-    description: "",
+    debtor: '',
+    amount: '',
+    dueDate: '',
+    description: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,24 +42,24 @@ export default function NewInvoicePage() {
         description: form.description,
       });
 
-      const freighter = await import("@stellar/freighter-api");
+      const freighter = await import('@stellar/freighter-api');
       const { signedTxXdr, error: signError } = await freighter.signTransaction(xdr, {
-        networkPassphrase: "Test SDF Network ; September 2015",
+        networkPassphrase: 'Test SDF Network ; September 2015',
         address: wallet.address,
       });
       if (signError) throw new Error(signError.message);
 
       await submitTx(signedTxXdr);
-      router.push("/dashboard");
+      router.push('/dashboard');
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Transaction failed.";
+      const msg = e instanceof Error ? e.message : 'Transaction failed.';
       setError(msg);
     } finally {
       setLoading(false);
     }
   }
 
-  const minDate = new Date(Date.now() + 86_400_000).toISOString().split("T")[0];
+  const minDate = new Date(Date.now() + 86_400_000).toISOString().split('T')[0];
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-6">
@@ -88,9 +88,7 @@ export default function NewInvoicePage() {
               />
 
               <div>
-                <label className="block text-sm text-brand-muted mb-2">
-                  Invoice Amount (USDC)
-                </label>
+                <label className="block text-sm text-brand-muted mb-2">Invoice Amount (USDC)</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -143,16 +141,24 @@ export default function NewInvoicePage() {
                 <p className="text-brand-gold font-medium">Invoice Summary</p>
                 <div className="flex justify-between text-brand-muted">
                   <span>Invoice amount</span>
-                  <span className="text-white">${parseFloat(form.amount || "0").toLocaleString()} USDC</span>
+                  <span className="text-white">
+                    ${parseFloat(form.amount || '0').toLocaleString()} USDC
+                  </span>
                 </div>
                 <div className="flex justify-between text-brand-muted">
                   <span>Due date</span>
-                  <span className="text-white">{new Date(form.dueDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span>
+                  <span className="text-white">
+                    {new Date(form.dueDate).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </span>
                 </div>
                 <div className="flex justify-between text-brand-muted">
                   <span>Estimated repayment (8% APY)</span>
                   <span className="text-white">
-                    ${(parseFloat(form.amount || "0") * 1.08).toFixed(2)} USDC
+                    ${(parseFloat(form.amount || '0') * 1.08).toFixed(2)} USDC
                   </span>
                 </div>
               </div>
@@ -169,7 +175,7 @@ export default function NewInvoicePage() {
               disabled={loading}
               className="w-full py-3.5 bg-brand-gold text-brand-dark font-semibold rounded-xl hover:bg-brand-amber transition-colors disabled:opacity-60 text-lg"
             >
-              {loading ? "Minting on Stellar..." : "Mint Invoice Token"}
+              {loading ? 'Minting on Stellar...' : 'Mint Invoice Token'}
             </button>
 
             <p className="text-xs text-brand-muted text-center">

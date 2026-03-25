@@ -1,14 +1,13 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import WalletConnect from "./WalletConnect";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import WalletConnect from './WalletConnect';
 
 const links = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/invest", label: "Invest" },
-  { href: "/invoice/new", label: "New Invoice" },
+  { href: '/dashboard', label: 'Dashboard' },
+  { href: '/invest', label: 'Invest' },
+  { href: '/invoice/new', label: 'New Invoice' },
 ];
 
 export default function Navbar() {
@@ -139,8 +138,8 @@ export default function Navbar() {
               href={l.href}
               className={`px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
                 path === l.href
-                  ? "bg-brand-gold/10 text-brand-gold"
-                  : "text-brand-muted hover:text-white hover:bg-brand-card"
+                  ? 'bg-brand-gold/10 text-brand-gold'
+                  : 'text-brand-muted hover:text-white hover:bg-brand-card'
               }`}
             >
               {l.label}

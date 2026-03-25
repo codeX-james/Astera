@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useStore } from "@/lib/store";
-import { truncateAddress } from "@/lib/stellar";
+import { useEffect, useState } from 'react';
+import { useStore } from '@/lib/store';
+import { truncateAddress } from '@/lib/stellar';
 
 export default function WalletConnect() {
   const { wallet, setWallet, disconnect } = useStore();
@@ -13,11 +13,11 @@ export default function WalletConnect() {
     setLoading(true);
     setError(null);
     try {
-      const freighter = await import("@stellar/freighter-api");
+      const freighter = await import('@stellar/freighter-api');
 
       const { isConnected } = await freighter.isConnected();
       if (!isConnected) {
-        setError("Freighter not detected. Install the extension first.");
+        setError('Freighter not detected. Install the extension first.');
         return;
       }
 
@@ -28,13 +28,13 @@ export default function WalletConnect() {
 
       const { address, error } = await freighter.getAddress();
       if (error) {
-        setError("Could not get wallet address. Please try again.");
+        setError('Could not get wallet address. Please try again.');
         return;
       }
 
-      setWallet({ address, connected: true, network: "testnet" });
+      setWallet({ address, connected: true, network: 'testnet' });
     } catch (e) {
-      setError("Failed to connect wallet.");
+      setError('Failed to connect wallet.');
       console.error(e);
     } finally {
       setLoading(false);
@@ -65,7 +65,7 @@ export default function WalletConnect() {
         disabled={loading}
         className="px-4 py-2 bg-brand-gold text-brand-dark font-semibold rounded-lg hover:bg-brand-amber transition-colors text-sm disabled:opacity-60"
       >
-        {loading ? "Connecting..." : "Connect Wallet"}
+        {loading ? 'Connecting...' : 'Connect Wallet'}
       </button>
       {error && <p className="text-red-400 text-xs">{error}</p>}
     </div>

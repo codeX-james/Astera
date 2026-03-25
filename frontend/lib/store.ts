@@ -1,5 +1,5 @@
-import { create } from "zustand";
-import type { WalletState, PoolConfig, InvestorPosition } from "./types";
+import { create } from 'zustand';
+import type { WalletState, PoolConfig, InvestorPosition } from './types';
 
 interface AsteraStore {
   wallet: WalletState;
@@ -13,7 +13,7 @@ interface AsteraStore {
 }
 
 export const useStore = create<AsteraStore>((set) => ({
-  wallet: { address: null, connected: false, network: "testnet" },
+  wallet: { address: null, connected: false, network: 'testnet' },
   poolConfig: null,
   position: null,
 
@@ -21,5 +21,5 @@ export const useStore = create<AsteraStore>((set) => ({
   setPoolConfig: (poolConfig) => set({ poolConfig }),
   setPosition: (position) => set({ position }),
   disconnect: () =>
-    set({ wallet: { address: null, connected: false, network: "testnet" }, position: null }),
+    set({ wallet: { address: null, connected: false, network: 'testnet' }, position: null }),
 }));

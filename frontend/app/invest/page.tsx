@@ -1,16 +1,22 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useStore } from "@/lib/store";
-import PoolStats from "@/components/PoolStats";
-import { getPoolConfig, getInvestorPosition, buildDepositTx, buildWithdrawTx, submitTx } from "@/lib/contracts";
-import { toStroops, fromStroops, formatUSDC } from "@/lib/stellar";
-import type { PoolConfig, InvestorPosition } from "@/lib/types";
+import { useEffect, useState } from 'react';
+import { useStore } from '@/lib/store';
+import PoolStats from '@/components/PoolStats';
+import {
+  getPoolConfig,
+  getInvestorPosition,
+  buildDepositTx,
+  buildWithdrawTx,
+  submitTx,
+} from '@/lib/contracts';
+import { toStroops, fromStroops, formatUSDC } from '@/lib/stellar';
+import type { PoolConfig, InvestorPosition } from '@/lib/types';
 
 export default function InvestPage() {
   const { wallet, poolConfig, setPoolConfig, position, setPosition } = useStore();
-  const [amount, setAmount] = useState("");
-  const [mode, setMode] = useState<"deposit" | "withdraw">("deposit");
+  const [amount, setAmount] = useState('');
+  const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [loading, setLoading] = useState(false);
   const [txLoading, setTxLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,24 +66,26 @@ export default function InvestPage() {
       const stroops = toStroops(parseFloat(amount));
 
       const xdr =
-        mode === "deposit"
+        mode === 'deposit'
           ? await buildDepositTx(wallet.address, stroops)
           : await buildWithdrawTx(wallet.address, stroops);
 
-      const freighter = await import("@stellar/freighter-api");
+      const freighter = await import('@stellar/freighter-api');
       const { signedTxXdr, error: signError } = await freighter.signTransaction(xdr, {
-        networkPassphrase: "Test SDF Network ; September 2015",
+        networkPassphrase: 'Test SDF Network ; September 2015',
         address: wallet.address,
       });
       if (signError) throw new Error(signError.message);
 
       await submitTx(signedTxXdr);
-      setSuccess(`${mode === "deposit" ? "Deposited" : "Withdrew"} ${formatUSDC(stroops)} successfully.`);
-      setAmount("");
+      setSuccess(
+        `${mode === 'deposit' ? 'Deposited' : 'Withdrew'} ${formatUSDC(stroops)} successfully.`,
+      );
+      setAmount('');
       await loadPool();
       await loadPosition(wallet.address);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Transaction failed.";
+      const msg = e instanceof Error ? e.message : 'Transaction failed.';
       setError(msg);
     } finally {
       setTxLoading(false);
@@ -114,14 +122,20 @@ export default function InvestPage() {
                 <h2 className="text-lg font-semibold mb-4">Your Position</h2>
                 <div className="space-y-3">
                   {[
-                    { label: "Total Deposited", value: formatUSDC(position.deposited) },
-                    { label: "Available to Withdraw", value: formatUSDC(position.available), highlight: true },
-                    { label: "Currently Deployed", value: formatUSDC(position.deployed) },
-                    { label: "Total Earned", value: formatUSDC(position.earned), highlight: true },
+                    { label: 'Total Deposited', value: formatUSDC(position.deposited) },
+                    {
+                      label: 'Available to Withdraw',
+                      value: formatUSDC(position.available),
+                      highlight: true,
+                    },
+                    { label: 'Currently Deployed', value: formatUSDC(position.deployed) },
+                    { label: 'Total Earned', value: formatUSDC(position.earned), highlight: true },
                   ].map((r) => (
                     <div key={r.label} className="flex justify-between items-center text-sm">
                       <span className="text-brand-muted">{r.label}</span>
-                      <span className={`font-semibold ${r.highlight ? "text-brand-gold" : "text-white"}`}>
+                      <span
+                        className={`font-semibold ${r.highlight ? 'text-brand-gold' : 'text-white'}`}
+                      >
                         {r.value}
                       </span>
                     </div>
@@ -140,14 +154,18 @@ export default function InvestPage() {
             ) : (
               <>
                 <div className="flex rounded-xl overflow-hidden border border-brand-border mb-6">
-                  {(["deposit", "withdraw"] as const).map((m) => (
+                  {(['deposit', 'withdraw'] as const).map((m) => (
                     <button
                       key={m}
-                      onClick={() => { setMode(m); setError(null); setSuccess(null); }}
+                      onClick={() => {
+                        setMode(m);
+                        setError(null);
+                        setSuccess(null);
+                      }}
                       className={`flex-1 py-2.5 text-sm font-medium capitalize transition-colors ${
                         mode === m
-                          ? "bg-brand-gold text-brand-dark"
-                          : "text-brand-muted hover:text-white"
+                          ? 'bg-brand-gold text-brand-dark'
+                          : 'text-brand-muted hover:text-white'
                       }`}
                     >
                       {m}
@@ -157,9 +175,7 @@ export default function InvestPage() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm text-brand-muted mb-2">
-                      Amount (USDC)
-                    </label>
+                    <label className="block text-sm text-brand-muted mb-2">Amount (USDC)</label>
                     <div className="relative">
                       <input
                         type="number"
@@ -175,7 +191,7 @@ export default function InvestPage() {
                         USDC
                       </span>
                     </div>
-                    {mode === "withdraw" && position && (
+                    {mode === 'withdraw' && position && (
                       <p className="text-xs text-brand-muted mt-1">
                         Available: {formatUSDC(position.available)}
                       </p>
@@ -198,7 +214,7 @@ export default function InvestPage() {
                     disabled={txLoading || !amount}
                     className="w-full py-3 bg-brand-gold text-brand-dark font-semibold rounded-xl hover:bg-brand-amber transition-colors disabled:opacity-60 capitalize"
                   >
-                    {txLoading ? "Processing..." : `${mode} USDC`}
+                    {txLoading ? 'Processing...' : `${mode} USDC`}
                   </button>
                 </form>
 
