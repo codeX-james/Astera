@@ -234,9 +234,12 @@ export default function HistoryPage() {
           setVisible(PAGE_SIZE);
         }
 
-        const lastToken = (raw.at(-1) as any)?.pagingToken;
-        setHasMore(raw.length === EVENT_LIMIT);
-        setCursor(lastToken);
+        const responseCursor =
+          typeof response === 'object' && response !== null && 'cursor' in response
+            ? (response as { cursor?: string }).cursor
+            : undefined;
+        setHasMore(raw.length === EVENT_LIMIT && Boolean(responseCursor));
+        setCursor(responseCursor);
       } catch (e) {
         setError('Failed to load transaction history. Make sure contracts are deployed.');
         console.error(e);

@@ -1,5 +1,18 @@
 export type InvoiceStatus = 'Pending' | 'Funded' | 'Paid' | 'Defaulted';
 
+/** On-chain view from `get_metadata` (SEP-oriented display fields). */
+export interface InvoiceMetadata {
+  name: string;
+  description: string;
+  image: string;
+  amount: bigint;
+  debtor: string;
+  dueDate: number;
+  status: InvoiceStatus;
+  symbol: string;
+  decimals: number;
+}
+
 export interface Invoice {
   id: number;
   owner: string;
@@ -23,10 +36,12 @@ export interface InvestorPosition {
 }
 
 export interface PoolConfig {
-  usdcToken: string;
   invoiceContract: string;
   admin: string;
   yieldBps: number;
+}
+
+export interface PoolTokenTotals {
   totalDeposited: bigint;
   totalDeployed: bigint;
   totalPaidOut: bigint;
@@ -35,6 +50,8 @@ export interface PoolConfig {
 export interface FundedInvoice {
   invoiceId: number;
   sme: string;
+  /** Stablecoin contract used for this invoice */
+  token: string;
   principal: bigint;
   committed: bigint;
   fundedAt: number;
