@@ -1,0 +1,182 @@
+import { rpc, INVOICE_CONTRACT_ID, POOL_CONTRACT_ID, scValToNative } from './stellar';
+import { notificationService } from './notifications';
+import {
+  LARGE_TX_THRESHOLD,
+  ACTIVITY_THRESHOLD_COUNT,
+  ACTIVITY_WINDOW_SECONDS,
+} from './alert-rules';
+
+/** Contract Event Interface */
+export interface ContractEvent {
+  id: string;
+  contractId: string;
+  topic: string[];
+  value: any;
+  ledger: number;
+  ledgerCloseAt: string;
+  txHash: string;
+}
+
+/** Tracking state for unusual activity */
+interface ActivityTracker {
+  [address: string]: {
+    [type: string]: number[]; // timestamps
+  };
+}
+
+class ContractMonitor {
+  private static instance: ContractMonitor;
+  private lastLedger: number = 0;
+  private activityHistory: ActivityTracker = {};
+
+  private constructor() {}
+
+  public static getInstance(): ContractMonitor {
+    if (!ContractMonitor.instance) {
+      ContractMonitor.instance = new ContractMonitor();
+    }
+    return ContractMonitor.instance;
+  }
+
+  /** Fetch and process events for Invoice and Pool contracts */
+  public async pollEvents(): Promise<ContractEvent[]> {
+    if (!INVOICE_CONTRACT_ID || !POOL_CONTRACT_ID) {
+      console.warn('[Astera Monitor] Contract IDs not configured. Skipping poll.');
+      return [];
+    }
+
+    try {
+      // 1. Fetch current latest ledger
+      const latestLedger = await rpc.getLatestLedger();
+      const startLedger = this.lastLedger || latestLedger.sequence - 100; // Look back 100 ledgers if no checkpoint
+      const endLedger = latestLedger.sequence;
+
+      console.log(`[Astera Monitor] Polling ledgers ${startLedger} to ${endLedger}`);
+
+      // 2. Query Events for both contracts
+      const response = await rpc.getEvents({
+        startLedger,
+        filters: [{ contractIds: [INVOICE_CONTRACT_ID, POOL_CONTRACT_ID] }],
+      });
+
+      const events: ContractEvent[] = response.events.map((e: any) => ({
+        id: e.id,
+        contractId: e.contractId,
+        topic: e.topic.map((t: any) => scValToNative(t)),
+        value: scValToNative(e.value),
+        ledger: e.ledger,
+        ledgerCloseAt: e.ledgerCloseAt,
+        txHash: e.txHash,
+      }));
+
+      // 3. Process each event for alerts
+      for (const event of events) {
+        await this.processEvent(event);
+      }
+
+      // 4. Update ledger checkpoint
+      this.lastLedger = endLedger + 1;
+
+      return events;
+    } catch (error) {
+      console.error('[Astera Monitor] Failed to poll events:', error);
+      return [];
+    }
+  }
+
+  private async processEvent(event: ContractEvent): Promise<void> {
+    const [contractType, eventType] = event.topic;
+    const value = event.value;
+
+    // A. Check for Large Transactions
+    // value could be [id, owner, amount] for 'created'
+    // or [investor, amount] for 'deposit'/'withdraw'
+    // or [id, principal, interest] for 'repaid'
+    let amount: bigint = 0n;
+    let sourceAddress: string = '';
+
+    if (contractType === 'INVOICE') {
+      if (eventType === 'created') {
+        const [id, owner, amt] = value;
+        amount = BigInt(amt);
+        sourceAddress = owner;
+      } else if (eventType === 'default') {
+        await notificationService.send({
+          id: `alert-default-${event.id}`,
+          type: 'CONTRACT_DEFAULT',
+          priority: 'CRITICAL',
+          message: `Invoice #${value} has been marked as DEFAULTED.`,
+          timestamp: Date.now(),
+          data: { invoiceId: value, txHash: event.txHash },
+        });
+      }
+    } else if (contractType === 'POOL') {
+      if (eventType === 'deposit' || eventType === 'withdraw') {
+        const [investor, amt] = value;
+        amount = BigInt(amt);
+        sourceAddress = investor;
+      } else if (eventType === 'funded') {
+        const [id, sme, principal] = value;
+        amount = BigInt(principal);
+        sourceAddress = sme;
+      } else if (eventType === 'repaid') {
+        const [id, principal, interest] = value;
+        amount = BigInt(principal);
+      }
+    }
+
+    // Evaluate Large Transaction Rule
+    // Threshold is human unit (e.g. 5000 USDC), on-chain is 7 decimals
+    const humanAmount = Number(amount) / 10_000_000;
+    if (humanAmount >= LARGE_TX_THRESHOLD) {
+      await notificationService.send({
+        id: `alert-large-${event.id}`,
+        type: 'LARGE_TRANSACTION',
+        priority: 'HIGH',
+        message: `Large ${eventType} detected: ${humanAmount.toLocaleString()} units.`,
+        timestamp: Date.now(),
+        data: { amount: humanAmount, type: eventType, source: sourceAddress, txHash: event.txHash },
+      });
+    }
+
+    // B. Check for Unusual Activity Patterns (Spamming)
+    if (sourceAddress) {
+      await this.checkUnusualActivity(sourceAddress, eventType, event.txHash);
+    }
+  }
+
+  private async checkUnusualActivity(address: string, type: string, txHash: string): Promise<void> {
+    const now = Math.floor(Date.now() / 1000);
+
+    if (!this.activityHistory[address]) this.activityHistory[address] = {};
+    if (!this.activityHistory[address][type]) this.activityHistory[address][type] = [];
+
+    // Filter for events within the window
+    this.activityHistory[address][type] = this.activityHistory[address][type].filter(
+      (ts) => now - ts < ACTIVITY_WINDOW_SECONDS,
+    );
+
+    this.activityHistory[address][type].push(now);
+
+    if (this.activityHistory[address][type].length >= ACTIVITY_THRESHOLD_COUNT) {
+      await notificationService.send({
+        id: `alert-unusual-${address}-${type}-${now}`,
+        type: 'UNUSUAL_ACTIVITY',
+        priority: 'MEDIUM',
+        message: `High frequency of '${type}' events from address ${address.slice(0, 6)}...${address.slice(-4)}.`,
+        timestamp: Date.now(),
+        data: {
+          address,
+          eventType: type,
+          count: this.activityHistory[address][type].length,
+          txHash,
+        },
+      });
+
+      // Reset tracker for this address/type to avoid duplicate alerts for the same burst
+      this.activityHistory[address][type] = [];
+    }
+  }
+}
+
+export const monitorService = ContractMonitor.getInstance();

@@ -1,0 +1,62 @@
+/** Alert Thresholds and Rules */
+
+/**
+ * Large Transaction Threshold (in USDC/EURC unit, e.g., $5,000).
+ * On-chain values are in stroops (7 decimals), so this will be multiplied by 10^7.
+ */
+export const LARGE_TX_THRESHOLD = 5000;
+
+/**
+ * Unusual Activity - Frequency Threshold
+ * Trigger if more than X events of the same type occur within the window.
+ */
+export const ACTIVITY_THRESHOLD_COUNT = 3;
+
+/**
+ * Unusual Activity - Time Window (in seconds)
+ * 10 minutes = 600 seconds.
+ */
+export const ACTIVITY_WINDOW_SECONDS = 600;
+
+/** Priority Levels for Alerts */
+export type AlertPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+/** Alert Types */
+export type AlertType =
+  | 'LARGE_TRANSACTION'
+  | 'UNUSUAL_ACTIVITY'
+  | 'CONTRACT_DEFAULT'
+  | 'SYSTEM_ERROR';
+
+/** Rule Definition */
+export interface AlertRule {
+  id: string;
+  name: string;
+  type: AlertType;
+  priority: AlertPriority;
+  description: string;
+}
+
+export const ALERT_RULES: AlertRule[] = [
+  {
+    id: 'rule-large-tx',
+    name: 'Large Transaction Alert',
+    type: 'LARGE_TRANSACTION',
+    priority: 'HIGH',
+    description: `Triggered when a transaction exceeds ${LARGE_TX_THRESHOLD} units.`,
+  },
+  {
+    id: 'rule-unusual-activity',
+    name: 'Unusual Activity Detection',
+    type: 'UNUSUAL_ACTIVITY',
+    priority: 'MEDIUM',
+    description: 'Triggered when multiple events occur from the same address in a short window.',
+  },
+  {
+    id: 'rule-contract-default',
+    name: 'Invoice Default Alert',
+    type: 'CONTRACT_DEFAULT',
+    priority: 'CRITICAL',
+    description: 'Triggered when an invoice is marked as defaulted.',
+  },
+];
