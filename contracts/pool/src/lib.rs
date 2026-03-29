@@ -5,10 +5,16 @@ use soroban_sdk::{
     token, Address, Env, Symbol, Vec,
 };
 
-/// Annual yield in basis points (800 = 8% APY)
 const DEFAULT_YIELD_BPS: u32 = 800;
 const BPS_DENOM: u32 = 10_000;
 const SECS_PER_YEAR: u64 = 31_536_000;
+
+const LEDGERS_PER_DAY: u32 = 17_280;
+const ACTIVE_INVOICE_TTL: u32 = LEDGERS_PER_DAY * 365;
+const COMPLETED_INVOICE_TTL: u32 = LEDGERS_PER_DAY * 30;
+const POSITION_TTL: u32 = LEDGERS_PER_DAY * 365;
+const INSTANCE_BUMP_AMOUNT: u32 = LEDGERS_PER_DAY * 30;
+const INSTANCE_LIFETIME_THRESHOLD: u32 = LEDGERS_PER_DAY * 7;
 
 #[contracttype]
 #[derive(Clone)]
@@ -69,20 +75,53 @@ pub struct InvestorTokenKey {
 }
 
 #[contracttype]
+#[derive(Clone, Default)]
+pub struct PoolStorageStats {
+    pub total_funded_invoices: u64,
+    pub active_funded_invoices: u64,
+    pub cleaned_invoices: u64,
+}
+
+#[contracttype]
 pub enum DataKey {
     Config,
     InvestorPosition(InvestorTokenKey),
     FundedInvoice(u64),
-    /// Vec<Address> of all investors who committed to this invoice
     CoFunders(u64),
-    /// i128 principal share committed by a specific investor to a specific invoice
     CoFundShare(CoFundKey),
     AcceptedTokens,
     TokenTotals(Address),
     Initialized,
+    StorageStats,
 }
 
 const EVT: Symbol = symbol_short!("POOL");
+
+fn bump_instance(env: &Env) {
+    env.storage()
+        .instance()
+        .extend_ttl(INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT);
+}
+
+fn set_funded_invoice_ttl(env: &Env, invoice_id: u64, is_completed: bool) {
+    let ttl = if is_completed {
+        COMPLETED_INVOICE_TTL
+    } else {
+        ACTIVE_INVOICE_TTL
+    };
+    let key = DataKey::FundedInvoice(invoice_id);
+    if env.storage().persistent().has(&key) {
+        env.storage().persistent().extend_ttl(&key, ttl, ttl);
+    }
+}
+
+fn set_position_ttl(env: &Env, key: &DataKey) {
+    if env.storage().persistent().has(key) {
+        env.storage()
+            .persistent()
+            .extend_ttl(key, POSITION_TTL, POSITION_TTL);
+    }
+}
 
 #[contract]
 pub struct FundingPool;
@@ -110,11 +149,15 @@ impl FundingPool {
             &PoolTokenTotals::default(),
         );
         env.storage().instance().set(&DataKey::Initialized, &true);
+        env.storage()
+            .instance()
+            .set(&DataKey::StorageStats, &PoolStorageStats::default());
+        bump_instance(&env);
     }
 
-    /// Admin adds a stablecoin to the accepted whitelist.
     pub fn add_token(env: Env, admin: Address, token: Address) {
         admin.require_auth();
+        bump_instance(&env);
         Self::require_admin(&env, &admin);
 
         let mut tokens: Vec<Address> = env
@@ -143,9 +186,9 @@ impl FundingPool {
         }
     }
 
-    /// Admin removes a stablecoin from the whitelist (only if no balances remain for that token).
     pub fn remove_token(env: Env, admin: Address, token: Address) {
         admin.require_auth();
+        bump_instance(&env);
         Self::require_admin(&env, &admin);
 
         let tokens: Vec<Address> = env
@@ -182,9 +225,9 @@ impl FundingPool {
             .set(&DataKey::AcceptedTokens, &new_tokens);
     }
 
-    /// Investor deposits an accepted stablecoin into the pool.
     pub fn deposit(env: Env, investor: Address, token: Address, amount: i128) {
         investor.require_auth();
+        bump_instance(&env);
         if amount <= 0 {
             panic!("amount must be positive");
         }
@@ -197,10 +240,11 @@ impl FundingPool {
             investor: investor.clone(),
             token: token.clone(),
         };
+        let pos_key = DataKey::InvestorPosition(key.clone());
         let mut position: InvestorPosition = env
             .storage()
             .persistent()
-            .get(&DataKey::InvestorPosition(key.clone()))
+            .get(&pos_key)
             .unwrap_or(InvestorPosition {
                 deposited: 0,
                 available: 0,
@@ -213,9 +257,8 @@ impl FundingPool {
         position.available += amount;
         position.deposit_count += 1;
 
-        env.storage()
-            .persistent()
-            .set(&DataKey::InvestorPosition(key), &position);
+        env.storage().persistent().set(&pos_key, &position);
+        set_position_ttl(&env, &pos_key);
 
         let mut tt: PoolTokenTotals = env
             .storage()
@@ -231,7 +274,6 @@ impl FundingPool {
             .publish((EVT, symbol_short!("deposit")), (investor, amount));
     }
 
-    /// Admin registers an invoice for co-funding in a specific stablecoin.
     pub fn init_co_funding(
         env: Env,
         admin: Address,
@@ -242,6 +284,7 @@ impl FundingPool {
         token: Address,
     ) {
         admin.require_auth();
+        bump_instance(&env);
         Self::require_admin(&env, &admin);
         Self::assert_accepted_token(&env, &token);
 
@@ -269,14 +312,23 @@ impl FundingPool {
         env.storage()
             .persistent()
             .set(&DataKey::FundedInvoice(invoice_id), &record);
+        set_funded_invoice_ttl(&env, invoice_id, false);
 
         let co_funders: Vec<Address> = Vec::new(&env);
         env.storage()
             .persistent()
             .set(&DataKey::CoFunders(invoice_id), &co_funders);
+
+        let mut stats: PoolStorageStats = env
+            .storage()
+            .instance()
+            .get(&DataKey::StorageStats)
+            .unwrap_or_default();
+        stats.total_funded_invoices += 1;
+        stats.active_funded_invoices += 1;
+        env.storage().instance().set(&DataKey::StorageStats, &stats);
     }
 
-    /// Investor commits available balance in the invoice's token toward funding.
     pub fn commit_to_invoice(
         env: Env,
         investor: Address,
@@ -284,6 +336,7 @@ impl FundingPool {
         amount: i128,
     ) {
         investor.require_auth();
+        bump_instance(&env);
         if amount <= 0 {
             panic!("amount must be positive");
         }
@@ -310,10 +363,11 @@ impl FundingPool {
             investor: investor.clone(),
             token: record.token.clone(),
         };
+        let pos_data_key = DataKey::InvestorPosition(pos_key.clone());
         let mut position: InvestorPosition = env
             .storage()
             .persistent()
-            .get(&DataKey::InvestorPosition(pos_key.clone()))
+            .get(&pos_data_key)
             .expect("investor has no position in this invoice token");
 
         if position.available < amount {
@@ -322,9 +376,8 @@ impl FundingPool {
 
         position.available -= amount;
         position.deployed += amount;
-        env.storage()
-            .persistent()
-            .set(&DataKey::InvestorPosition(pos_key), &position);
+        env.storage().persistent().set(&pos_data_key, &position);
+        set_position_ttl(&env, &pos_data_key);
 
         let share_key = CoFundKey {
             invoice_id,
@@ -379,14 +432,15 @@ impl FundingPool {
         env.storage()
             .persistent()
             .set(&DataKey::FundedInvoice(invoice_id), &record);
+        set_funded_invoice_ttl(&env, invoice_id, false);
         env.storage()
             .instance()
             .set(&DataKey::TokenTotals(record.token.clone()), &tt);
     }
 
-    /// SME repays the invoice in the same token the invoice was funded with.
     pub fn repay_invoice(env: Env, invoice_id: u64, payer: Address) {
         payer.require_auth();
+        bump_instance(&env);
 
         let config: PoolConfig = env
             .storage()
@@ -445,24 +499,33 @@ impl FundingPool {
                 investor: investor_addr.clone(),
                 token: record.token.clone(),
             };
+            let pos_data_key = DataKey::InvestorPosition(pos_key.clone());
             let mut pos: InvestorPosition = env
                 .storage()
                 .persistent()
-                .get(&DataKey::InvestorPosition(pos_key.clone()))
+                .get(&pos_data_key)
                 .expect("co-funder position missing");
 
             pos.available += share + investor_interest;
             pos.deployed -= share;
             pos.earned += investor_interest;
-            env.storage()
-                .persistent()
-                .set(&DataKey::InvestorPosition(pos_key), &pos);
+            env.storage().persistent().set(&pos_data_key, &pos);
+            set_position_ttl(&env, &pos_data_key);
         }
 
         record.repaid = true;
         env.storage()
             .persistent()
             .set(&DataKey::FundedInvoice(invoice_id), &record);
+        set_funded_invoice_ttl(&env, invoice_id, true);
+
+        let mut stats: PoolStorageStats = env
+            .storage()
+            .instance()
+            .get(&DataKey::StorageStats)
+            .unwrap_or_default();
+        stats.active_funded_invoices = stats.active_funded_invoices.saturating_sub(1);
+        env.storage().instance().set(&DataKey::StorageStats, &stats);
 
         let mut tt: PoolTokenTotals = env
             .storage()
@@ -482,9 +545,9 @@ impl FundingPool {
         );
     }
 
-    /// Investor withdraws available balance in a given token.
     pub fn withdraw(env: Env, investor: Address, token: Address, amount: i128) {
         investor.require_auth();
+        bump_instance(&env);
         if amount <= 0 {
             panic!("amount must be positive");
         }
@@ -494,10 +557,11 @@ impl FundingPool {
             investor: investor.clone(),
             token: token.clone(),
         };
+        let pos_data_key = DataKey::InvestorPosition(key.clone());
         let mut position: InvestorPosition = env
             .storage()
             .persistent()
-            .get(&DataKey::InvestorPosition(key.clone()))
+            .get(&pos_data_key)
             .expect("no position found");
 
         if position.available < amount {
@@ -509,9 +573,8 @@ impl FundingPool {
 
         position.available -= amount;
         position.deposited -= amount;
-        env.storage()
-            .persistent()
-            .set(&DataKey::InvestorPosition(key), &position);
+        env.storage().persistent().set(&pos_data_key, &position);
+        set_position_ttl(&env, &pos_data_key);
 
         let mut tt: PoolTokenTotals = env
             .storage()
@@ -529,6 +592,7 @@ impl FundingPool {
 
     pub fn set_yield(env: Env, admin: Address, yield_bps: u32) {
         admin.require_auth();
+        bump_instance(&env);
         let mut config: PoolConfig = env
             .storage()
             .instance()
@@ -544,7 +608,8 @@ impl FundingPool {
 
     // ---- Views ----
 
-    pub fn get_config(env: Env) -> PoolConfig {
+        pub fn get_config(env: Env) -> PoolConfig {
+        bump_instance(&env);
         env.storage()
             .instance()
             .get(&DataKey::Config)
@@ -552,6 +617,7 @@ impl FundingPool {
     }
 
     pub fn accepted_tokens(env: Env) -> Vec<Address> {
+        bump_instance(&env);
         env.storage()
             .instance()
             .get(&DataKey::AcceptedTokens)
@@ -559,6 +625,7 @@ impl FundingPool {
     }
 
     pub fn get_token_totals(env: Env, token: Address) -> PoolTokenTotals {
+        bump_instance(&env);
         env.storage()
             .instance()
             .get(&DataKey::TokenTotals(token))
@@ -566,6 +633,7 @@ impl FundingPool {
     }
 
     pub fn get_position(env: Env, investor: Address, token: Address) -> Option<InvestorPosition> {
+        bump_instance(&env);
         let key = InvestorTokenKey { investor, token };
         env.storage()
             .persistent()
@@ -573,12 +641,14 @@ impl FundingPool {
     }
 
     pub fn get_funded_invoice(env: Env, invoice_id: u64) -> Option<FundedInvoice> {
+        bump_instance(&env);
         env.storage()
             .persistent()
             .get(&DataKey::FundedInvoice(invoice_id))
     }
 
     pub fn get_co_fund_share(env: Env, invoice_id: u64, investor: Address) -> i128 {
+        bump_instance(&env);
         env.storage()
             .persistent()
             .get(&DataKey::CoFundShare(CoFundKey { invoice_id, investor }))
@@ -586,6 +656,7 @@ impl FundingPool {
     }
 
     pub fn available_liquidity(env: Env, token: Address) -> i128 {
+        bump_instance(&env);
         let tt: PoolTokenTotals = env
             .storage()
             .instance()
@@ -594,7 +665,66 @@ impl FundingPool {
         tt.total_deposited - tt.total_deployed
     }
 
+    pub fn get_storage_stats(env: Env) -> PoolStorageStats {
+        bump_instance(&env);
+        env.storage()
+            .instance()
+            .get(&DataKey::StorageStats)
+            .unwrap_or_default()
+    }
+
+    pub fn cleanup_funded_invoice(env: Env, admin: Address, invoice_id: u64) {
+        admin.require_auth();
+        bump_instance(&env);
+        Self::require_admin(&env, &admin);
+
+        let record: FundedInvoice = env
+            .storage()
+            .persistent()
+            .get(&DataKey::FundedInvoice(invoice_id))
+            .expect("funded invoice not found");
+
+        if !record.repaid {
+            panic!("can only cleanup repaid invoices");
+        }
+
+        env.storage()
+            .persistent()
+            .remove(&DataKey::FundedInvoice(invoice_id));
+
+        let co_funders: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::CoFunders(invoice_id))
+            .unwrap_or_else(|| Vec::new(&env));
+
+        for investor_addr in co_funders.iter() {
+            let share_key = CoFundKey {
+                invoice_id,
+                investor: investor_addr.clone(),
+            };
+            env.storage()
+                .persistent()
+                .remove(&DataKey::CoFundShare(share_key));
+        }
+
+        env.storage()
+            .persistent()
+            .remove(&DataKey::CoFunders(invoice_id));
+
+        let mut stats: PoolStorageStats = env
+            .storage()
+            .instance()
+            .get(&DataKey::StorageStats)
+            .unwrap_or_default();
+        stats.cleaned_invoices += 1;
+        env.storage().instance().set(&DataKey::StorageStats, &stats);
+
+        env.events().publish((EVT, symbol_short!("cleanup")), invoice_id);
+    }
+
     pub fn estimate_repayment(env: Env, invoice_id: u64) -> i128 {
+        bump_instance(&env);
         let config: PoolConfig = env
             .storage()
             .instance()
@@ -966,83 +1096,70 @@ mod test {
         let investor = Address::generate(&env);
         let sme = Address::generate(&env);
 
-        // Setup: mint USDC to investor and SME
-        let deposit_amount: i128 = 1_000_000_000; // 1000 USDC (7 decimals)
-        let repay_buffer: i128 = 100_000_000; // Extra for interest
+        let deposit_amount: i128 = 1_000_000_000;
+        let repay_buffer: i128 = 100_000_000;
         mint(&env, &usdc_id, &investor, deposit_amount);
         mint(&env, &usdc_id, &sme, deposit_amount + repay_buffer);
 
-        // Step 1: Deposit USDC → verify investor position updated
-        client.deposit(&investor, &deposit_amount);
-        let pos = client.get_position(&investor).unwrap();
+        client.deposit(&investor, &usdc_id, &deposit_amount);
+        let pos = client.get_position(&investor, &usdc_id).unwrap();
         assert_eq!(pos.deposited, deposit_amount);
         assert_eq!(pos.available, deposit_amount);
         assert_eq!(pos.deployed, 0);
         assert_eq!(pos.earned, 0);
         assert_eq!(pos.deposit_count, 1);
 
-        let config = client.get_config();
-        assert_eq!(config.total_deposited, deposit_amount);
-        assert_eq!(config.total_deployed, 0);
+        let tt = client.get_token_totals(&usdc_id);
+        assert_eq!(tt.total_deposited, deposit_amount);
+        assert_eq!(tt.total_deployed, 0);
 
-        // Step 2: Fund invoice → verify SME receives USDC, pool deployed balance updated
         let invoice_id: u64 = 100;
         let principal = deposit_amount;
-        let due_date = env.ledger().timestamp() + 2_592_000; // 30 days
+        let due_date = env.ledger().timestamp() + 2_592_000;
 
-        client.init_co_funding(&admin, &invoice_id, &principal, &sme, &due_date);
+        client.init_co_funding(&admin, &invoice_id, &principal, &sme, &due_date, &usdc_id);
         client.commit_to_invoice(&investor, &invoice_id, &principal);
 
-        // Verify investor position after funding
-        let pos = client.get_position(&investor).unwrap();
+        let pos = client.get_position(&investor, &usdc_id).unwrap();
         assert_eq!(pos.available, 0);
         assert_eq!(pos.deployed, principal);
 
-        // Verify funded invoice record
         let record = client.get_funded_invoice(&invoice_id).unwrap();
         assert_eq!(record.principal, principal);
         assert_eq!(record.committed, principal);
         assert!(record.funded_at > 0);
         assert!(!record.repaid);
 
-        // Verify pool config
-        let config = client.get_config();
-        assert_eq!(config.total_deployed, principal);
+        let tt = client.get_token_totals(&usdc_id);
+        assert_eq!(tt.total_deployed, principal);
 
-        // Step 3: Advance time and repay → verify interest calculated correctly
         let elapsed_days = 30u64;
         env.ledger().with_mut(|l| l.timestamp += elapsed_days * 86_400);
 
         let initial_available = pos.available;
         client.repay_invoice(&invoice_id, &sme);
 
-        // Verify investor position after repayment
-        let pos = client.get_position(&investor).unwrap();
+        let pos = client.get_position(&investor, &usdc_id).unwrap();
         assert_eq!(pos.deployed, 0);
-        assert!(pos.available > initial_available + principal); // Principal + interest
+        assert!(pos.available > initial_available + principal);
         assert!(pos.earned > 0);
 
-        // Verify interest calculation accuracy
         let expected_interest = (principal as u128 * DEFAULT_YIELD_BPS as u128 
             * (elapsed_days * 86_400) as u128) 
             / (BPS_DENOM as u128 * SECS_PER_YEAR as u128);
         assert_eq!(pos.earned, expected_interest as i128);
 
-        // Verify invoice marked as repaid
         let record = client.get_funded_invoice(&invoice_id).unwrap();
         assert!(record.repaid);
 
-        // Step 4: Withdraw available balance → verify investor receives USDC
         let withdraw_amount = pos.available;
         let earned_before_withdraw = pos.earned;
-        client.withdraw(&investor, &withdraw_amount);
+        client.withdraw(&investor, &usdc_id, &withdraw_amount);
 
-        let pos = client.get_position(&investor).unwrap();
+        let pos = client.get_position(&investor, &usdc_id).unwrap();
         assert_eq!(pos.available, 0);
-        // After withdrawing everything, deposited should be 0 (or could be negative due to accounting)
-        // The key is that available is 0 and deployed is 0
         assert_eq!(pos.deployed, 0);
-        assert_eq!(pos.earned, earned_before_withdraw); // Earned amount doesn't change on withdrawal
+        assert_eq!(pos.earned, earned_before_withdraw);
     }
 
     #[test]
@@ -1053,66 +1170,60 @@ mod test {
         let (client, admin, usdc_id) = setup(&env);
         let principal: i128 = 1_000_000_000;
 
-        // Test 1: 7 days
         let investor1 = Address::generate(&env);
         let sme1 = Address::generate(&env);
         mint(&env, &usdc_id, &investor1, principal);
         mint(&env, &usdc_id, &sme1, principal + 100_000_000);
 
-        client.deposit(&investor1, &principal);
-        client.init_co_funding(&admin, &1, &principal, &sme1, &(env.ledger().timestamp() + 604_800));
+        client.deposit(&investor1, &usdc_id, &principal);
+        client.init_co_funding(&admin, &1, &principal, &sme1, &(env.ledger().timestamp() + 604_800), &usdc_id);
         client.commit_to_invoice(&investor1, &1, &principal);
 
-        env.ledger().with_mut(|l| l.timestamp += 7 * 86_400); // 7 days
+        env.ledger().with_mut(|l| l.timestamp += 7 * 86_400);
         client.repay_invoice(&1, &sme1);
 
-        let pos1 = client.get_position(&investor1).unwrap();
+        let pos1 = client.get_position(&investor1, &usdc_id).unwrap();
         let expected_7d = (principal as u128 * DEFAULT_YIELD_BPS as u128 * (7 * 86_400) as u128) 
             / (BPS_DENOM as u128 * SECS_PER_YEAR as u128);
         assert_eq!(pos1.earned, expected_7d as i128);
 
-        // Test 2: 90 days
         let investor2 = Address::generate(&env);
         let sme2 = Address::generate(&env);
         mint(&env, &usdc_id, &investor2, principal);
         mint(&env, &usdc_id, &sme2, principal + 200_000_000);
 
-        client.deposit(&investor2, &principal);
-        client.init_co_funding(&admin, &2, &principal, &sme2, &(env.ledger().timestamp() + 7_776_000));
+        client.deposit(&investor2, &usdc_id, &principal);
+        client.init_co_funding(&admin, &2, &principal, &sme2, &(env.ledger().timestamp() + 7_776_000), &usdc_id);
         client.commit_to_invoice(&investor2, &2, &principal);
 
-        env.ledger().with_mut(|l| l.timestamp += 90 * 86_400); // 90 days
+        env.ledger().with_mut(|l| l.timestamp += 90 * 86_400);
         client.repay_invoice(&2, &sme2);
 
-        let pos2 = client.get_position(&investor2).unwrap();
+        let pos2 = client.get_position(&investor2, &usdc_id).unwrap();
         let expected_90d = (principal as u128 * DEFAULT_YIELD_BPS as u128 * (90 * 86_400) as u128) 
             / (BPS_DENOM as u128 * SECS_PER_YEAR as u128);
         assert_eq!(pos2.earned, expected_90d as i128);
 
-        // Test 3: 365 days (full year)
         let investor3 = Address::generate(&env);
         let sme3 = Address::generate(&env);
         mint(&env, &usdc_id, &investor3, principal);
         mint(&env, &usdc_id, &sme3, principal + 300_000_000);
 
-        client.deposit(&investor3, &principal);
-        client.init_co_funding(&admin, &3, &principal, &sme3, &(env.ledger().timestamp() + SECS_PER_YEAR));
+        client.deposit(&investor3, &usdc_id, &principal);
+        client.init_co_funding(&admin, &3, &principal, &sme3, &(env.ledger().timestamp() + SECS_PER_YEAR), &usdc_id);
         client.commit_to_invoice(&investor3, &3, &principal);
 
-        env.ledger().with_mut(|l| l.timestamp += SECS_PER_YEAR); // 365 days
+        env.ledger().with_mut(|l| l.timestamp += SECS_PER_YEAR);
         client.repay_invoice(&3, &sme3);
 
-        let pos3 = client.get_position(&investor3).unwrap();
+        let pos3 = client.get_position(&investor3, &usdc_id).unwrap();
         let expected_365d = (principal as u128 * DEFAULT_YIELD_BPS as u128 * SECS_PER_YEAR as u128) 
             / (BPS_DENOM as u128 * SECS_PER_YEAR as u128);
         assert_eq!(pos3.earned, expected_365d as i128);
 
-        // Verify 90 days earns more than 7 days, and 365 days earns most
         assert!(pos2.earned > pos1.earned);
         assert!(pos3.earned > pos2.earned);
     }
-
-    // ---- Panic Tests ----
 
     #[test]
     #[should_panic(expected = "amount must be positive")]
@@ -1124,7 +1235,7 @@ mod test {
         let investor = Address::generate(&env);
         mint(&env, &usdc_id, &investor, 1_000_000_000);
 
-        client.deposit(&investor, &0);
+        client.deposit(&investor, &usdc_id, &0);
     }
 
     #[test]
@@ -1138,15 +1249,14 @@ mod test {
         let sme = Address::generate(&env);
 
         mint(&env, &usdc_id, &investor, 500_000_000);
-        client.deposit(&investor, &500_000_000);
+        client.deposit(&investor, &usdc_id, &500_000_000);
 
         let invoice_id: u64 = 1;
-        let principal: i128 = 1_000_000_000; // More than deposited
+        let principal: i128 = 1_000_000_000;
         let due_date = env.ledger().timestamp() + 2_592_000;
 
-        client.init_co_funding(&admin, &invoice_id, &principal, &sme, &due_date);
+        client.init_co_funding(&admin, &invoice_id, &principal, &sme, &due_date, &usdc_id);
         
-        // Try to commit more than available
         client.commit_to_invoice(&investor, &invoice_id, &1_000_000_000);
     }
 
@@ -1164,19 +1274,17 @@ mod test {
         mint(&env, &usdc_id, &investor, principal);
         mint(&env, &usdc_id, &sme, principal * 2);
 
-        client.deposit(&investor, &principal);
+        client.deposit(&investor, &usdc_id, &principal);
         
         let invoice_id: u64 = 1;
         let due_date = env.ledger().timestamp() + 2_592_000;
-        client.init_co_funding(&admin, &invoice_id, &principal, &sme, &due_date);
+        client.init_co_funding(&admin, &invoice_id, &principal, &sme, &due_date, &usdc_id);
         client.commit_to_invoice(&investor, &invoice_id, &principal);
 
         env.ledger().with_mut(|l| l.timestamp += 30 * 86_400);
         
-        // First repayment succeeds
         client.repay_invoice(&invoice_id, &sme);
         
-        // Second repayment should panic
         client.repay_invoice(&invoice_id, &sme);
     }
 
@@ -1190,10 +1298,9 @@ mod test {
         let investor = Address::generate(&env);
 
         mint(&env, &usdc_id, &investor, 1_000_000_000);
-        client.deposit(&investor, &1_000_000_000);
+        client.deposit(&investor, &usdc_id, &1_000_000_000);
 
-        // Try to withdraw more than available
-        client.withdraw(&investor, &2_000_000_000);
+        client.withdraw(&investor, &usdc_id, &2_000_000_000);
     }
 
     #[test]
@@ -1204,7 +1311,6 @@ mod test {
 
         let (client, admin, _usdc_id) = setup(&env);
 
-        // Try to set yield to 51% (5100 bps)
         client.set_yield(&admin, &5_100);
     }
 
@@ -1214,7 +1320,7 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let (client, _admin, _usdc_id) = setup(&env);
+        let (client, _admin, usdc_id) = setup(&env);
         let non_admin = Address::generate(&env);
         let sme = Address::generate(&env);
 
@@ -1222,8 +1328,7 @@ mod test {
         let principal: i128 = 1_000_000_000;
         let due_date = env.ledger().timestamp() + 2_592_000;
 
-        // Non-admin tries to initialize co-funding
-        client.init_co_funding(&non_admin, &invoice_id, &principal, &sme, &due_date);
+        client.init_co_funding(&non_admin, &invoice_id, &principal, &sme, &due_date, &usdc_id);
     }
 
     #[test]
@@ -1242,6 +1347,8 @@ mod test {
 
     #[test]
     #[should_panic(expected = "amount must be positive")]
+        #[test]
+    #[should_panic(expected = "amount must be positive")]
     fn test_withdraw_zero_amount_panics() {
         let env = Env::default();
         env.mock_all_auths();
@@ -1250,9 +1357,9 @@ mod test {
         let investor = Address::generate(&env);
 
         mint(&env, &usdc_id, &investor, 1_000_000_000);
-        client.deposit(&investor, &1_000_000_000);
+        client.deposit(&investor, &usdc_id, &1_000_000_000);
 
-        client.withdraw(&investor, &0);
+        client.withdraw(&investor, &usdc_id, &0);
     }
 
     #[test]
@@ -1265,6 +1372,64 @@ mod test {
         let investor = Address::generate(&env);
         mint(&env, &usdc_id, &investor, 1_000_000_000);
 
-        client.deposit(&investor, &-100);
+        client.deposit(&investor, &usdc_id, &-100);
+    }
+
+    #[test]
+    fn test_storage_stats() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let (client, admin, usdc_id) = setup(&env);
+        let investor = Address::generate(&env);
+        let sme = Address::generate(&env);
+
+        let stats = client.get_storage_stats();
+        assert_eq!(stats.total_funded_invoices, 0);
+
+        mint(&env, &usdc_id, &investor, 2_000_000_000);
+        mint(&env, &usdc_id, &sme, 2_000_000_000);
+        client.deposit(&investor, &usdc_id, &1_000_000_000);
+
+        let due = env.ledger().timestamp() + 2_592_000;
+        client.init_co_funding(&admin, &1, &1_000_000_000, &sme, &due, &usdc_id);
+
+        let stats = client.get_storage_stats();
+        assert_eq!(stats.total_funded_invoices, 1);
+        assert_eq!(stats.active_funded_invoices, 1);
+
+        client.commit_to_invoice(&investor, &1, &1_000_000_000);
+        env.ledger().with_mut(|l| l.timestamp += 30 * 86_400);
+        client.repay_invoice(&1, &sme);
+
+        let stats = client.get_storage_stats();
+        assert_eq!(stats.active_funded_invoices, 0);
+    }
+
+    #[test]
+    fn test_cleanup_funded_invoice() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let (client, admin, usdc_id) = setup(&env);
+        let investor = Address::generate(&env);
+        let sme = Address::generate(&env);
+
+        mint(&env, &usdc_id, &investor, 2_000_000_000);
+        mint(&env, &usdc_id, &sme, 2_000_000_000);
+        client.deposit(&investor, &usdc_id, &1_000_000_000);
+
+        let due = env.ledger().timestamp() + 2_592_000;
+        client.init_co_funding(&admin, &1, &1_000_000_000, &sme, &due, &usdc_id);
+        client.commit_to_invoice(&investor, &1, &1_000_000_000);
+        env.ledger().with_mut(|l| l.timestamp += 30 * 86_400);
+        client.repay_invoice(&1, &sme);
+
+        let stats_before = client.get_storage_stats();
+        client.cleanup_funded_invoice(&admin, &1);
+        let stats_after = client.get_storage_stats();
+
+        assert_eq!(stats_after.cleaned_invoices, stats_before.cleaned_invoices + 1);
+        assert!(client.get_funded_invoice(&1).is_none());
     }
 }

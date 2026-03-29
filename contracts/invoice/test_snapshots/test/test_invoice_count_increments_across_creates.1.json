@@ -32,6 +32,9 @@
                 },
                 {
                   "string": "i"
+                },
+                {
+                  "string": "h"
                 }
               ]
             }
@@ -66,6 +69,9 @@
                 },
                 {
                   "string": "i"
+                },
+                {
+                  "string": "h"
                 }
               ]
             }
@@ -100,6 +106,9 @@
                 },
                 {
                   "string": "i"
+                },
+                {
+                  "string": "h"
                 }
               ]
             }
@@ -194,6 +203,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "dispute_reason"
+                      },
+                      "val": {
+                        "string": ""
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "due_date"
                       },
                       "val": {
@@ -214,6 +231,14 @@
                       },
                       "val": {
                         "u64": 1
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "oracle_verified"
+                      },
+                      "val": {
+                        "bool": false
                       }
                     },
                     {
@@ -251,6 +276,14 @@
                           }
                         ]
                       }
+                    },
+                    {
+                      "key": {
+                        "symbol": "verification_hash"
+                      },
+                      "val": {
+                        "string": "h"
+                      }
                     }
                   ]
                 }
@@ -258,7 +291,7 @@
             },
             "ext": "v0"
           },
-          4095
+          6307200
         ]
       ],
       [
@@ -335,6 +368,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "dispute_reason"
+                      },
+                      "val": {
+                        "string": ""
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "due_date"
                       },
                       "val": {
@@ -355,6 +396,14 @@
                       },
                       "val": {
                         "u64": 2
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "oracle_verified"
+                      },
+                      "val": {
+                        "bool": false
                       }
                     },
                     {
@@ -392,6 +441,14 @@
                           }
                         ]
                       }
+                    },
+                    {
+                      "key": {
+                        "symbol": "verification_hash"
+                      },
+                      "val": {
+                        "string": "h"
+                      }
                     }
                   ]
                 }
@@ -399,7 +456,7 @@
             },
             "ext": "v0"
           },
-          4095
+          6307200
         ]
       ],
       [
@@ -476,6 +533,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "dispute_reason"
+                      },
+                      "val": {
+                        "string": ""
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "due_date"
                       },
                       "val": {
@@ -496,6 +561,14 @@
                       },
                       "val": {
                         "u64": 3
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "oracle_verified"
+                      },
+                      "val": {
+                        "bool": false
                       }
                     },
                     {
@@ -533,6 +606,14 @@
                           }
                         ]
                       }
+                    },
+                    {
+                      "key": {
+                        "symbol": "verification_hash"
+                      },
+                      "val": {
+                        "string": "h"
+                      }
                     }
                   ]
                 }
@@ -540,7 +621,7 @@
             },
             "ext": "v0"
           },
-          4095
+          6307200
         ]
       ],
       [
@@ -613,6 +694,43 @@
                         "val": {
                           "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                         }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "StorageStats"
+                            }
+                          ]
+                        },
+                        "val": {
+                          "map": [
+                            {
+                              "key": {
+                                "symbol": "active_invoices"
+                              },
+                              "val": {
+                                "u64": 3
+                              }
+                            },
+                            {
+                              "key": {
+                                "symbol": "cleaned_invoices"
+                              },
+                              "val": {
+                                "u64": 0
+                              }
+                            },
+                            {
+                              "key": {
+                                "symbol": "total_invoices"
+                              },
+                              "val": {
+                                "u64": 3
+                              }
+                            }
+                          ]
+                        }
                       }
                     ]
                   }
@@ -621,7 +739,7 @@
             },
             "ext": "v0"
           },
-          4095
+          518400
         ]
       ],
       [
@@ -741,7 +859,7 @@
             },
             "ext": "v0"
           },
-          4095
+          518400
         ]
       ]
     ]
