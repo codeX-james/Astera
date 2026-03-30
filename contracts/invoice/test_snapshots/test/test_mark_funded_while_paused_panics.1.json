@@ -19,22 +19,22 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
                 },
                 {
-                  "string": "ACME Corp"
+                  "string": "D"
                 },
                 {
                   "i128": {
                     "hi": 0,
-                    "lo": 1000000000
+                    "lo": 1000
                   }
                 },
                 {
-                  "u64": 2592000
+                  "u64": 10000
                 },
                 {
-                  "string": "Invoice #001 - Goods delivery"
+                  "string": "x"
                 },
                 {
-                  "string": "abc123"
+                  "string": "h"
                 }
               ]
             }
@@ -43,22 +43,17 @@
         }
       ]
     ],
-    [],
-    [],
     [
       [
-        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M",
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
         {
           "function": {
             "contract_fn": {
               "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "mark_funded",
+              "function_name": "pause",
               "args": [
                 {
-                  "u64": 1
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                 }
               ]
             }
@@ -67,31 +62,6 @@
         }
       ]
     ],
-    [],
-    [],
-    [
-      [
-        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4",
-        {
-          "function": {
-            "contract_fn": {
-              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "mark_paid",
-              "args": [
-                {
-                  "u64": 1
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
-                }
-              ]
-            }
-          },
-          "sub_invocations": []
-        }
-      ]
-    ],
-    [],
     []
   ],
   "ledger": {
@@ -148,7 +118,7 @@
                       "val": {
                         "i128": {
                           "hi": 0,
-                          "lo": 1000000000
+                          "lo": 1000
                         }
                       }
                     },
@@ -165,7 +135,7 @@
                         "symbol": "debtor"
                       },
                       "val": {
-                        "string": "ACME Corp"
+                        "string": "D"
                       }
                     },
                     {
@@ -173,7 +143,7 @@
                         "symbol": "description"
                       },
                       "val": {
-                        "string": "Invoice #001 - Goods delivery"
+                        "string": "x"
                       }
                     },
                     {
@@ -189,7 +159,7 @@
                         "symbol": "due_date"
                       },
                       "val": {
-                        "u64": 2592000
+                        "u64": 10000
                       }
                     },
                     {
@@ -237,7 +207,7 @@
                         "symbol": "pool_contract"
                       },
                       "val": {
-                        "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                        "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                       }
                     },
                     {
@@ -247,7 +217,7 @@
                       "val": {
                         "vec": [
                           {
-                            "symbol": "Paid"
+                            "symbol": "Pending"
                           }
                         ]
                       }
@@ -257,7 +227,7 @@
                         "symbol": "verification_hash"
                       },
                       "val": {
-                        "string": "abc123"
+                        "string": "h"
                       }
                     }
                   ]
@@ -337,7 +307,7 @@
                           ]
                         },
                         "val": {
-                          "bool": false
+                          "bool": true
                         }
                       },
                       {
@@ -367,7 +337,7 @@
                                 "symbol": "active_invoices"
                               },
                               "val": {
-                                "u64": 0
+                                "u64": 1
                               }
                             },
                             {
@@ -402,7 +372,7 @@
       [
         {
           "contract_data": {
-            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M",
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
             "key": {
               "ledger_key_nonce": {
                 "nonce": 5541220902715666415
@@ -417,7 +387,7 @@
             "data": {
               "contract_data": {
                 "ext": "v0",
-                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
                 "key": {
                   "ledger_key_nonce": {
                     "nonce": 5541220902715666415
@@ -454,39 +424,6 @@
                 "key": {
                   "ledger_key_nonce": {
                     "nonce": 801925984706572462
-                  }
-                },
-                "durability": "temporary",
-                "val": "void"
-              }
-            },
-            "ext": "v0"
-          },
-          6311999
-        ]
-      ],
-      [
-        {
-          "contract_data": {
-            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4",
-            "key": {
-              "ledger_key_nonce": {
-                "nonce": 1033654523790656264
-              }
-            },
-            "durability": "temporary"
-          }
-        },
-        [
-          {
-            "last_modified_ledger_seq": 0,
-            "data": {
-              "contract_data": {
-                "ext": "v0",
-                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4",
-                "key": {
-                  "ledger_key_nonce": {
-                    "nonce": 1033654523790656264
                   }
                 },
                 "durability": "temporary",
