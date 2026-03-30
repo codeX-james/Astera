@@ -3,6 +3,7 @@ members = [
     "contracts/invoice",
     "contracts/pool",
     "contracts/credit_score",
+    "contracts/share",
 ]
 resolver = "2"
 
