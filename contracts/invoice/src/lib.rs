@@ -1,7 +1,7 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short, Address, Bytes, Env, String, Symbol,
+    contract, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN, Env, String, Symbol,
 };
 
 const LEDGERS_PER_DAY: u32 = 17_280;
@@ -13,6 +13,7 @@ const UPGRADE_TIMELOCK_SECS: u64 = 86400; // 24 hours
 const MAX_WASM_HASH_LEN: u32 = 32;
 const MAX_INVOICES_PER_DAY: u32 = 10;
 const SECS_PER_DAY: u64 = 86400;
+const DEFAULT_GRACE_PERIOD_DAYS: u32 = 7; // 7 days default grace period
 
 #[contracttype]
 #[derive(Clone, PartialEq, Debug)]
@@ -83,6 +84,11 @@ pub enum DataKey {
     Initialized,
     StorageStats,
     Paused,
+    GracePeriodDays,
+    DailyInvoiceCount(Address),
+    DailyInvoiceResetTime(Address),
+    ProposedWasmHash,
+    UpgradeScheduledAt,
 }
 
 const EVT: Symbol = symbol_short!("INVOICE");
@@ -168,6 +174,9 @@ impl InvoiceContract {
             .instance()
             .set(&DataKey::StorageStats, &StorageStats::default());
         env.storage().instance().set(&DataKey::Paused, &false);
+        env.storage()
+            .instance()
+            .set(&DataKey::GracePeriodDays, &DEFAULT_GRACE_PERIOD_DAYS);
         bump_instance(&env);
     }
 
@@ -183,8 +192,7 @@ impl InvoiceContract {
         }
         env.storage().instance().set(&DataKey::Paused, &true);
         bump_instance(&env);
-        env.events()
-            .publish((EVT, symbol_short!("paused")), admin);
+        env.events().publish((EVT, symbol_short!("paused")), admin);
     }
 
     pub fn unpause(env: Env, admin: Address) {
@@ -225,7 +233,7 @@ impl InvoiceContract {
         env.storage().instance().set(&DataKey::Oracle, &oracle);
         bump_instance(&env);
         env.events()
-            .publish((EVT, symbol_short!("set_oracle")), (admin, oracle));
+            .publish((EVT, symbol_short!("set_oracl")), (admin, oracle));
     }
 
     pub fn create_invoice(
@@ -435,8 +443,8 @@ impl InvoiceContract {
             .get(&DataKey::Invoice(id))
             .expect("invoice not found");
 
-        let is_fundable = invoice.status == InvoiceStatus::Pending
-            || invoice.status == InvoiceStatus::Verified;
+        let is_fundable =
+            invoice.status == InvoiceStatus::Pending || invoice.status == InvoiceStatus::Verified;
         if !is_fundable {
             panic!("invoice is not in fundable state");
         }
@@ -522,6 +530,19 @@ impl InvoiceContract {
 
         if invoice.status != InvoiceStatus::Funded {
             panic!("invoice is not funded");
+        }
+
+        // Check grace period
+        let grace_period_days: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::GracePeriodDays)
+            .unwrap_or(DEFAULT_GRACE_PERIOD_DAYS);
+        let grace_period_secs = grace_period_days as u64 * SECS_PER_DAY;
+        let now = env.ledger().timestamp();
+
+        if now < invoice.due_date + grace_period_secs {
+            panic!("grace period has not expired");
         }
 
         invoice.status = InvoiceStatus::Defaulted;
@@ -646,6 +667,36 @@ impl InvoiceContract {
             .publish((EVT, symbol_short!("set_pool")), (admin, pool));
     }
 
+    pub fn set_grace_period(env: Env, admin: Address, days: u32) {
+        admin.require_auth();
+        require_not_paused(&env);
+        bump_instance(&env);
+        let stored_admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("not initialized");
+        if admin != stored_admin {
+            panic!("unauthorized");
+        }
+        if days > 90 {
+            panic!("grace period cannot exceed 90 days");
+        }
+        env.storage()
+            .instance()
+            .set(&DataKey::GracePeriodDays, &days);
+        env.events()
+            .publish((EVT, symbol_short!("set_grace")), (admin, days));
+    }
+
+    pub fn get_grace_period(env: Env) -> u32 {
+        bump_instance(&env);
+        env.storage()
+            .instance()
+            .get(&DataKey::GracePeriodDays)
+            .unwrap_or(DEFAULT_GRACE_PERIOD_DAYS)
+    }
+
     pub fn propose_upgrade(env: Env, admin: Address, wasm_hash: Bytes) {
         admin.require_auth();
         bump_instance(&env);
@@ -667,8 +718,12 @@ impl InvoiceContract {
             .instance()
             .set(&DataKey::UpgradeScheduledAt, &env.ledger().timestamp());
         env.events().publish(
-            (EVT, symbol_short!("upgrade_proposed")),
-            (admin, wasm_hash, env.ledger().timestamp() + UPGRADE_TIMELOCK_SECS),
+            (EVT, symbol_short!("upg_prop")),
+            (
+                admin,
+                wasm_hash,
+                env.ledger().timestamp() + UPGRADE_TIMELOCK_SECS,
+            ),
         );
     }
 
@@ -697,8 +752,10 @@ impl InvoiceContract {
             .instance()
             .get(&DataKey::ProposedWasmHash)
             .expect("no wasm hash proposed");
-        env.deployer().update_current_contract_wasm(wasm_hash);
-        env.events().publish((EVT, symbol_short!("upgraded")), (admin, now));
+        let wasm_hash_bytes: BytesN<32> = wasm_hash.try_into().unwrap();
+        env.deployer().update_current_contract_wasm(wasm_hash_bytes);
+        env.events()
+            .publish((EVT, symbol_short!("upgraded")), (admin, now));
     }
 }
 
@@ -1237,5 +1294,174 @@ mod test {
         client.mark_funded(&id, &pool);
         client.mark_paid(&id, &sme);
         assert_eq!(client.get_invoice(&id).status, InvoiceStatus::Paid);
+    }
+
+    // ---- Grace Period Tests ----
+
+    #[test]
+    fn test_default_grace_period() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _admin, _pool, _sme) = setup(&env);
+        assert_eq!(client.get_grace_period(), 7);
+    }
+
+    #[test]
+    fn test_set_grace_period() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, admin, _pool, _sme) = setup(&env);
+
+        client.set_grace_period(&admin, &14);
+        assert_eq!(client.get_grace_period(), 14);
+
+        client.set_grace_period(&admin, &0);
+        assert_eq!(client.get_grace_period(), 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "grace period cannot exceed 90 days")]
+    fn test_set_grace_period_exceeds_max() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, admin, _pool, _sme) = setup(&env);
+        client.set_grace_period(&admin, &91);
+    }
+
+    #[test]
+    #[should_panic(expected = "unauthorized")]
+    fn test_set_grace_period_unauthorized() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _admin, _pool, _sme) = setup(&env);
+        let intruder = Address::generate(&env);
+        client.set_grace_period(&intruder, &14);
+    }
+
+    #[test]
+    #[should_panic(expected = "grace period has not expired")]
+    fn test_mark_defaulted_within_grace_period() {
+        let env = Env::default();
+        env.mock_all_auths();
+        env.ledger().with_mut(|l| l.timestamp = 100_000);
+
+        let (client, _admin, pool, sme) = setup(&env);
+        let due_date = 200_000u64;
+
+        let id = client.create_invoice(
+            &sme,
+            &String::from_str(&env, "D"),
+            &1_000i128,
+            &due_date,
+            &String::from_str(&env, "x"),
+            &String::from_str(&env, "h"),
+        );
+        client.mark_funded(&id, &pool);
+
+        // Move to 3 days past due (within 7 day grace period)
+        env.ledger()
+            .with_mut(|l| l.timestamp = due_date + (3 * 86_400));
+
+        // Should panic
+        client.mark_defaulted(&id, &pool);
+    }
+
+    #[test]
+    fn test_mark_defaulted_after_grace_period() {
+        let env = Env::default();
+        env.mock_all_auths();
+        env.ledger().with_mut(|l| l.timestamp = 100_000);
+
+        let (client, _admin, pool, sme) = setup(&env);
+        let due_date = 200_000u64;
+
+        let id = client.create_invoice(
+            &sme,
+            &String::from_str(&env, "D"),
+            &1_000i128,
+            &due_date,
+            &String::from_str(&env, "x"),
+            &String::from_str(&env, "h"),
+        );
+        client.mark_funded(&id, &pool);
+
+        // Move to 8 days past due (beyond 7 day grace period)
+        env.ledger()
+            .with_mut(|l| l.timestamp = due_date + (8 * 86_400));
+
+        // Should succeed
+        client.mark_defaulted(&id, &pool);
+        let invoice = client.get_invoice(&id);
+        assert_eq!(invoice.status, InvoiceStatus::Defaulted);
+    }
+
+    #[test]
+    fn test_custom_grace_period_enforcement() {
+        let env = Env::default();
+        env.mock_all_auths();
+        env.ledger().with_mut(|l| l.timestamp = 100_000);
+
+        let (client, admin, pool, sme) = setup(&env);
+
+        // Set custom grace period of 14 days
+        client.set_grace_period(&admin, &14);
+
+        let due_date = 200_000u64;
+        let id = client.create_invoice(
+            &sme,
+            &String::from_str(&env, "D"),
+            &1_000i128,
+            &due_date,
+            &String::from_str(&env, "x"),
+            &String::from_str(&env, "h"),
+        );
+        client.mark_funded(&id, &pool);
+
+        // Move to 10 days past due (within 14 day grace period)
+        env.ledger()
+            .with_mut(|l| l.timestamp = due_date + (10 * 86_400));
+
+        // Verify grace period is set correctly
+        assert_eq!(client.get_grace_period(), 14);
+
+        // Move to 15 days past due (beyond 14 day grace period)
+        env.ledger()
+            .with_mut(|l| l.timestamp = due_date + (15 * 86_400));
+
+        // Should succeed
+        client.mark_defaulted(&id, &pool);
+        let invoice = client.get_invoice(&id);
+        assert_eq!(invoice.status, InvoiceStatus::Defaulted);
+    }
+
+    #[test]
+    fn test_zero_grace_period() {
+        let env = Env::default();
+        env.mock_all_auths();
+        env.ledger().with_mut(|l| l.timestamp = 100_000);
+
+        let (client, admin, pool, sme) = setup(&env);
+
+        // Set zero grace period
+        client.set_grace_period(&admin, &0);
+
+        let due_date = 200_000u64;
+        let id = client.create_invoice(
+            &sme,
+            &String::from_str(&env, "D"),
+            &1_000i128,
+            &due_date,
+            &String::from_str(&env, "x"),
+            &String::from_str(&env, "h"),
+        );
+        client.mark_funded(&id, &pool);
+
+        // Move to exactly due date
+        env.ledger().with_mut(|l| l.timestamp = due_date);
+
+        // Should succeed immediately
+        client.mark_defaulted(&id, &pool);
+        let invoice = client.get_invoice(&id);
+        assert_eq!(invoice.status, InvoiceStatus::Defaulted);
     }
 }
