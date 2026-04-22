@@ -98,3 +98,50 @@ class NotificationService {
 }
 
 export const notificationService = NotificationService.getInstance();
+
+// ---- Invoice Status Notification Helpers ----
+
+/**
+ * Notify that an invoice has been funded.
+ * Call this after a successful `fund_invoice` transaction.
+ */
+export function notifyInvoiceFunded(invoiceId: number, amount: bigint): void {
+  notificationService.send({
+    id: `invoice-funded-${invoiceId}-${Date.now()}`,
+    type: 'INVOICE_FUNDED',
+    priority: 'MEDIUM',
+    message: `Invoice #${invoiceId} has been funded for ${Number(amount) / 10_000_000} USDC.`,
+    timestamp: Date.now(),
+    data: { invoiceId, amount: amount.toString() },
+  });
+}
+
+/**
+ * Notify that an invoice has been repaid.
+ * Call this after a successful `repay_invoice` transaction.
+ */
+export function notifyInvoicePaid(invoiceId: number, amount: bigint): void {
+  notificationService.send({
+    id: `invoice-paid-${invoiceId}-${Date.now()}`,
+    type: 'INVOICE_PAID',
+    priority: 'MEDIUM',
+    message: `Invoice #${invoiceId} has been fully repaid. Amount: ${Number(amount) / 10_000_000} USDC.`,
+    timestamp: Date.now(),
+    data: { invoiceId, amount: amount.toString() },
+  });
+}
+
+/**
+ * Notify that an invoice has defaulted.
+ * Call this after a `mark_default` transaction is confirmed.
+ */
+export function notifyInvoiceDefaulted(invoiceId: number): void {
+  notificationService.send({
+    id: `invoice-defaulted-${invoiceId}-${Date.now()}`,
+    type: 'INVOICE_DEFAULTED',
+    priority: 'CRITICAL',
+    message: `Invoice #${invoiceId} has been marked as DEFAULTED. Investors should review their positions.`,
+    timestamp: Date.now(),
+    data: { invoiceId },
+  });
+}

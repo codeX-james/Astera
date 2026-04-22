@@ -156,7 +156,7 @@ export async function getPoolTokenTotals(token: string): Promise<PoolTokenTotals
     totalDeposited: BigInt(raw.total_deposited as string),
     totalDeployed: BigInt(raw.total_deployed as string),
     totalPaidOut: BigInt(raw.total_paid_out as string),
-    totalFeeRevenue: BigInt(raw.total_fee_revenue ?? 0),
+    totalFeeRevenue: BigInt((raw.total_fee_revenue as string | number | bigint) ?? 0),
   };
 }
 
@@ -237,7 +237,7 @@ export async function getFundedInvoice(invoiceId: number): Promise<FundedInvoice
     principal: BigInt(r.principal as string),
     committed: BigInt(r.committed as string),
     fundedAt: Number(r.funded_at),
-    factoringFee: BigInt(r.factoring_fee ?? 0),
+    factoringFee: BigInt((r.factoring_fee as string | number | bigint) ?? 0),
     dueDate: Number(r.due_date),
     repaid: Boolean(r.repaid),
   };

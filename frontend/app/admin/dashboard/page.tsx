@@ -48,11 +48,11 @@ export default function AdminDashboardPage() {
       fundedInvoices.length > 0 ? (defaultedInvoices.length / fundedInvoices.length) * 100 : 0;
 
     return {
-      tvl: poolConfig.totalDeposited,
+      tvl: 0n,
       activeCount: activeInvoices.length,
       defaultRate: defaultRate.toFixed(2) + '%',
-      totalDeployed: poolConfig.totalDeployed,
-      totalPaidOut: poolConfig.totalPaidOut,
+      totalDeployed: 0n,
+      totalPaidOut: 0n,
     };
   }, [poolConfig, invoices]);
 

@@ -26,7 +26,10 @@ export type AlertType =
   | 'LARGE_TRANSACTION'
   | 'UNUSUAL_ACTIVITY'
   | 'CONTRACT_DEFAULT'
-  | 'SYSTEM_ERROR';
+  | 'SYSTEM_ERROR'
+  | 'INVOICE_FUNDED'
+  | 'INVOICE_PAID'
+  | 'INVOICE_DEFAULTED';
 
 /** Rule Definition */
 export interface AlertRule {
@@ -58,5 +61,26 @@ export const ALERT_RULES: AlertRule[] = [
     type: 'CONTRACT_DEFAULT',
     priority: 'CRITICAL',
     description: 'Triggered when an invoice is marked as defaulted.',
+  },
+  {
+    id: 'rule-invoice-funded',
+    name: 'Invoice Funded',
+    type: 'INVOICE_FUNDED',
+    priority: 'MEDIUM',
+    description: 'Triggered when an invoice transitions to the Funded status.',
+  },
+  {
+    id: 'rule-invoice-paid',
+    name: 'Invoice Paid',
+    type: 'INVOICE_PAID',
+    priority: 'MEDIUM',
+    description: 'Triggered when an invoice is fully repaid.',
+  },
+  {
+    id: 'rule-invoice-defaulted',
+    name: 'Invoice Defaulted',
+    type: 'INVOICE_DEFAULTED',
+    priority: 'CRITICAL',
+    description: 'Triggered when an invoice is marked as defaulted via the SME/investor flow.',
   },
 ];
