@@ -162,7 +162,7 @@ export default function MonitoringPage() {
                       </span>
                     </div>
                     <p className="text-sm font-bold text-white mb-1">{alert.message}</p>
-                    {alert.data?.txHash && (
+                    {typeof alert.data?.txHash === 'string' && (
                       <a
                         href={`https://stellar.expert/explorer/testnet/tx/${alert.data.txHash}`}
                         target="_blank"

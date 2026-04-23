@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import WalletConnect from './WalletConnect';
+import ThemeToggle from './ThemeToggle';
+import NotificationBell from './NotificationBell';
 
 const links = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/invest', label: 'Invest' },
+  { href: '/portfolio', label: 'Portfolio' },
   { href: '/invoice/new', label: 'New Invoice' },
 ];
 
@@ -58,32 +60,37 @@ export default function Navbar() {
             ))}
           </nav>
 
-          {/* Desktop wallet button */}
-          <div className="hidden md:block">
+          {/* Desktop theme toggle + notification bell + wallet button */}
+          <div className="hidden md:flex items-center gap-2">
+            <NotificationBell />
+            <ThemeToggle />
             <WalletConnect />
           </div>
 
-          {/* Mobile hamburger */}
-          <button
-            onClick={() => setDrawerOpen(true)}
-            aria-label="Open menu"
-            aria-expanded={drawerOpen}
-            className="md:hidden p-2 rounded-lg text-brand-muted hover:text-white hover:bg-brand-card transition-colors"
-          >
-            <svg
-              width="20"
-              height="20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              aria-hidden="true"
+          {/* Mobile: theme toggle + hamburger */}
+          <div className="md:hidden flex items-center gap-1">
+            <ThemeToggle />
+            <button
+              onClick={() => setDrawerOpen(true)}
+              aria-label="Open menu"
+              aria-expanded={drawerOpen}
+              className="p-2 rounded-lg text-brand-muted hover:text-white hover:bg-brand-card transition-colors"
             >
-              <line x1="2" y1="5" x2="18" y2="5" />
-              <line x1="2" y1="10" x2="18" y2="10" />
-              <line x1="2" y1="15" x2="18" y2="15" />
-            </svg>
-          </button>
+              <svg
+                width="20"
+                height="20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <line x1="2" y1="5" x2="18" y2="5" />
+                <line x1="2" y1="10" x2="18" y2="10" />
+                <line x1="2" y1="15" x2="18" y2="15" />
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -151,9 +158,13 @@ export default function Navbar() {
           ))}
         </nav>
 
-        {/* Wallet connect */}
-        <div className="p-6 border-t border-brand-border shrink-0">
+        {/* Wallet connect + theme toggle */}
+        <div className="p-6 border-t border-brand-border shrink-0 flex flex-col gap-3">
           <WalletConnect />
+          <div className="flex items-center gap-2 text-sm text-brand-muted">
+            <ThemeToggle />
+            <span>Toggle theme</span>
+          </div>
         </div>
       </aside>
     </>

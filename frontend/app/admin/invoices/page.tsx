@@ -104,6 +104,7 @@ export default function AdminInvoicesPage() {
         principal: invoice.amount,
         sme: invoice.owner,
         dueDate: invoice.dueDate,
+        token: invoice.poolContract,
       });
 
       const freighter = await import('@stellar/freighter-api');
