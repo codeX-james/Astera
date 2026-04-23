@@ -1,7 +1,7 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short, Address, Bytes, Env, String, Symbol, Vec,
+    contract, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN, Env, String, Symbol, Vec,
 };
 
 const MIN_SCORE: u32 = 200;
@@ -64,6 +64,8 @@ pub enum DataKey {
     Initialized,
     ScoreVersion,
     Paused,
+    ProposedWasmHash,
+    UpgradeScheduledAt,
 }
 
 const EVT: Symbol = symbol_short!("CREDIT");
@@ -174,7 +176,8 @@ impl CreditScoreContract {
         admin.require_auth();
         Self::require_admin(&env, &admin);
         env.storage().instance().set(&DataKey::Paused, &false);
-        env.events().publish((EVT, symbol_short!("unpaused")), admin);
+        env.events()
+            .publish((EVT, symbol_short!("unpaused")), admin);
     }
 
     pub fn is_paused(env: Env) -> bool {
@@ -473,8 +476,10 @@ impl CreditScoreContract {
         env.storage()
             .instance()
             .set(&DataKey::InvoiceContract, &invoice_contract);
-        env.events()
-            .publish((EVT, symbol_short!("set_invoice_contract")), (admin, invoice_contract));
+        env.events().publish(
+            (EVT, symbol_short!("set_inv")),
+            (admin, invoice_contract),
+        );
     }
 
     pub fn set_pool_contract(env: Env, admin: Address, pool_contract: Address) {
@@ -484,8 +489,10 @@ impl CreditScoreContract {
         env.storage()
             .instance()
             .set(&DataKey::PoolContract, &pool_contract);
-        env.events()
-            .publish((EVT, symbol_short!("set_pool_contract")), (admin, pool_contract));
+        env.events().publish(
+            (EVT, symbol_short!("set_pool")),
+            (admin, pool_contract),
+        );
     }
 
     fn get_or_create_credit_data(env: &Env, sme: &Address) -> CreditScoreData {
@@ -535,8 +542,12 @@ impl CreditScoreContract {
             .instance()
             .set(&DataKey::UpgradeScheduledAt, &env.ledger().timestamp());
         env.events().publish(
-            (EVT, symbol_short!("upgrade_proposed")),
-            (admin, wasm_hash, env.ledger().timestamp() + UPGRADE_TIMELOCK_SECS),
+            (EVT, symbol_short!("upg_prop")),
+            (
+                admin,
+                wasm_hash,
+                env.ledger().timestamp() + UPGRADE_TIMELOCK_SECS,
+            ),
         );
     }
 
@@ -557,8 +568,10 @@ impl CreditScoreContract {
             .instance()
             .get(&DataKey::ProposedWasmHash)
             .expect("no wasm hash proposed");
-        env.deployer().update_current_contract_wasm(wasm_hash);
-        env.events().publish((EVT, symbol_short!("upgraded")), (admin, now));
+        let wasm_hash_bytes: BytesN<32> = wasm_hash.try_into().unwrap();
+        env.deployer().update_current_contract_wasm(wasm_hash_bytes);
+        env.events()
+            .publish((EVT, symbol_short!("upgraded")), (admin, now));
     }
 }
 
@@ -839,7 +852,9 @@ mod test {
         // Uses a simple LCG to generate 100 varied input combinations.
         let mut seed: u64 = 0xDEAD_BEEF_1234_5678;
         let lcg = |s: &mut u64| -> u64 {
-            *s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            *s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             *s
         };
 
@@ -876,7 +891,9 @@ mod test {
         // which scores >= adding a default.
         let mut seed: u64 = 0xCAFE_BABE_0000_0001;
         let lcg = |s: &mut u64| -> u64 {
-            *s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            *s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             *s
         };
 
@@ -889,19 +906,42 @@ mod test {
             let vol = (lcg(&mut seed) % 50_000_000_000) as i128;
             let avg = (lcg(&mut seed) % 20) as i64;
 
-            let score_on_time = calculate_score(base_invoices + 1, base_on_time + 1, base_late, base_defaulted, vol, avg);
-            let score_late = calculate_score(base_invoices + 1, base_on_time, base_late + 1, base_defaulted, vol, avg);
-            let score_default = calculate_score(base_invoices + 1, base_on_time, base_late, base_defaulted + 1, vol, avg);
+            let score_on_time = calculate_score(
+                base_invoices + 1,
+                base_on_time + 1,
+                base_late,
+                base_defaulted,
+                vol,
+                avg,
+            );
+            let score_late = calculate_score(
+                base_invoices + 1,
+                base_on_time,
+                base_late + 1,
+                base_defaulted,
+                vol,
+                avg,
+            );
+            let score_default = calculate_score(
+                base_invoices + 1,
+                base_on_time,
+                base_late,
+                base_defaulted + 1,
+                vol,
+                avg,
+            );
 
             assert!(
                 score_on_time >= score_late,
                 "on_time score {} < late score {} — monotonicity violated",
-                score_on_time, score_late
+                score_on_time,
+                score_late
             );
             assert!(
                 score_late >= score_default,
                 "late score {} < default score {} — monotonicity violated",
-                score_late, score_default
+                score_late,
+                score_default
             );
         }
     }
@@ -913,7 +953,9 @@ mod test {
         // When defaulted > paid_on_time and paid_late == 0, score must be < BASE_SCORE.
         let mut seed: u64 = 0xF00D_CAFE_ABCD_EF01;
         let lcg = |s: &mut u64| -> u64 {
-            *s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            *s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             *s
         };
 
@@ -928,7 +970,10 @@ mod test {
             assert!(
                 score < BASE_SCORE,
                 "score {} >= BASE_SCORE {} when defaulted({}) > on_time({}) with no late payments",
-                score, BASE_SCORE, defaulted, on_time
+                score,
+                BASE_SCORE,
+                defaulted,
+                on_time
             );
         }
     }
@@ -961,7 +1006,9 @@ mod test {
                 band,
                 soroban_sdk::String::from_str(&env, expected),
                 "score {} should map to '{}' but got '{:?}'",
-                score, expected, band
+                score,
+                expected,
+                band
             );
         }
     }
@@ -978,7 +1025,9 @@ mod test {
 
         let mut seed: u64 = 0x0F0F_0F0F_A5A5_A5A5;
         let lcg = |s: &mut u64| -> u64 {
-            *s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            *s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             *s
         };
 
@@ -996,27 +1045,50 @@ mod test {
                 if is_default {
                     client.record_default(&pool, &invoice_id, &sme, &1_000_000_000i128, &due_date);
                 } else {
-                    client.record_payment(&pool, &invoice_id, &sme, &1_000_000_000i128, &due_date, &(due_date - 1000));
+                    client.record_payment(
+                        &pool,
+                        &invoice_id,
+                        &sme,
+                        &1_000_000_000i128,
+                        &due_date,
+                        &(due_date - 1000),
+                    );
                 }
             }
 
             // History length matches
-            assert_eq!(client.get_payment_history_length(&sme), n as u32,
-                "trial {}: history length mismatch", trial);
+            assert_eq!(
+                client.get_payment_history_length(&sme),
+                n as u32,
+                "trial {}: history length mismatch",
+                trial
+            );
 
             // Full history in order
             let history = client.get_payment_history(&sme);
-            assert_eq!(history.len(), n as u32,
-                "trial {}: history vec length mismatch", trial);
+            assert_eq!(
+                history.len(),
+                n as u32,
+                "trial {}: history vec length mismatch",
+                trial
+            );
 
             // Individual record lookup matches history
             for i in 0..n as u32 {
                 let by_index = client.get_payment_record(&sme, &i).unwrap();
                 let from_history = history.get(i).unwrap();
-                assert_eq!(by_index.invoice_id, from_history.invoice_id,
-                    "trial {}: record {} invoice_id mismatch", trial, i);
-                assert_eq!(by_index.invoice_id, expected_ids.get(i).unwrap(),
-                    "trial {}: record {} not in insertion order", trial, i);
+                assert_eq!(
+                    by_index.invoice_id, from_history.invoice_id,
+                    "trial {}: record {} invoice_id mismatch",
+                    trial, i
+                );
+                assert_eq!(
+                    by_index.invoice_id,
+                    expected_ids.get(i).unwrap(),
+                    "trial {}: record {} not in insertion order",
+                    trial,
+                    i
+                );
             }
         }
     }
@@ -1033,8 +1105,22 @@ mod test {
         let (client, _admin, _invoice, pool) = setup(&env);
         let sme = Address::generate(&env);
         let due_date = 200_000u64;
-        client.record_payment(&pool, &99, &sme, &1_000_000_000i128, &due_date, &(due_date - 1000));
-        client.record_payment(&pool, &99, &sme, &1_000_000_000i128, &due_date, &(due_date - 1000));
+        client.record_payment(
+            &pool,
+            &99,
+            &sme,
+            &1_000_000_000i128,
+            &due_date,
+            &(due_date - 1000),
+        );
+        client.record_payment(
+            &pool,
+            &99,
+            &sme,
+            &1_000_000_000i128,
+            &due_date,
+            &(due_date - 1000),
+        );
     }
 
     #[test]
@@ -1059,7 +1145,14 @@ mod test {
         let (client, _admin, _invoice, pool) = setup(&env);
         let sme = Address::generate(&env);
         let due_date = 200_000u64;
-        client.record_payment(&pool, &97, &sme, &1_000_000_000i128, &due_date, &(due_date - 1000));
+        client.record_payment(
+            &pool,
+            &97,
+            &sme,
+            &1_000_000_000i128,
+            &due_date,
+            &(due_date - 1000),
+        );
         client.record_default(&pool, &97, &sme, &1_000_000_000i128, &due_date);
     }
 
@@ -1072,7 +1165,9 @@ mod test {
 
         let mut seed: u64 = 0x1234_5678_9ABC_DEF0;
         let lcg = |s: &mut u64| -> u64 {
-            *s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            *s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             *s
         };
 
@@ -1088,7 +1183,14 @@ mod test {
                 if is_default {
                     client.record_default(&pool, &invoice_id, &sme, &1_000_000_000i128, &due_date);
                 } else {
-                    client.record_payment(&pool, &invoice_id, &sme, &1_000_000_000i128, &due_date, &(due_date - 1000));
+                    client.record_payment(
+                        &pool,
+                        &invoice_id,
+                        &sme,
+                        &1_000_000_000i128,
+                        &due_date,
+                        &(due_date - 1000),
+                    );
                 }
             }
 
@@ -1112,7 +1214,9 @@ mod test {
 
         let mut seed: u64 = 0xABCD_EF01_2345_6789;
         let lcg = |s: &mut u64| -> u64 {
-            *s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            *s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             *s
         };
 
@@ -1131,7 +1235,14 @@ mod test {
                 if is_default {
                     client.record_default(&pool, &invoice_id, &sme, &amount, &due_date);
                 } else {
-                    client.record_payment(&pool, &invoice_id, &sme, &amount, &due_date, &(due_date - 1000));
+                    client.record_payment(
+                        &pool,
+                        &invoice_id,
+                        &sme,
+                        &amount,
+                        &due_date,
+                        &(due_date - 1000),
+                    );
                 }
             }
 
