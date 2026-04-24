@@ -244,6 +244,9 @@ proptest! {
         env.mock_all_auths();
         let (client, admin, _usdc, _share) = setup(&env);
 
+        // Relax policy so fuzzing arbitrary yields isn't blocked by cooldown/step limits.
+        client.set_yield_change_policy(&admin, &1u64, &5_000u32);
+        env.ledger().with_mut(|l| l.timestamp += 1);
         client.set_yield(&admin, &yield_bps);
         let config = client.get_config();
         prop_assert_eq!(config.yield_bps, yield_bps);
