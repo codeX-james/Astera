@@ -90,6 +90,7 @@ pub enum DataKey {
     ProposedWasmHash,
     UpgradeScheduledAt,
     GracePeriodDays,
+    MaxInvoiceAmount,
 }
 
 const EVT: Symbol = symbol_short!("INVOICE");
@@ -170,9 +171,12 @@ pub struct InvoiceContract;
 
 #[contractimpl]
 impl InvoiceContract {
-    pub fn initialize(env: Env, admin: Address, pool: Address) {
+    pub fn initialize(env: Env, admin: Address, pool: Address, max_invoice_amount: i128) {
         if env.storage().instance().has(&DataKey::Initialized) {
             panic!("already initialized");
+        }
+        if max_invoice_amount <= 0 {
+            panic!("max invoice amount must be positive");
         }
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Pool, &pool);
@@ -185,6 +189,9 @@ impl InvoiceContract {
         env.storage()
             .instance()
             .set(&DataKey::GracePeriodDays, &DEFAULT_GRACE_PERIOD_DAYS);
+        env.storage()
+            .instance()
+            .set(&DataKey::MaxInvoiceAmount, &max_invoice_amount);
         bump_instance(&env);
     }
 
@@ -259,6 +266,14 @@ impl InvoiceContract {
 
         if amount <= 0 {
             panic!("amount must be positive");
+        }
+        let max_invoice_amount: i128 = env
+            .storage()
+            .instance()
+            .get(&DataKey::MaxInvoiceAmount)
+            .expect("max invoice amount not set");
+        if amount > max_invoice_amount {
+            panic!("invoice amount exceeds maximum");
         }
         if due_date <= env.ledger().timestamp() {
             panic!("due date must be in the future");
@@ -721,6 +736,36 @@ impl InvoiceContract {
             .set(&DataKey::GracePeriodDays, &days);
     }
 
+    pub fn set_max_invoice_amount(env: Env, admin: Address, max_invoice_amount: i128) {
+        admin.require_auth();
+        require_not_paused(&env);
+        bump_instance(&env);
+        let stored_admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("not initialized");
+        if admin != stored_admin {
+            panic!("unauthorized");
+        }
+        if max_invoice_amount <= 0 {
+            panic!("max invoice amount must be positive");
+        }
+        env.storage()
+            .instance()
+            .set(&DataKey::MaxInvoiceAmount, &max_invoice_amount);
+        env.events()
+            .publish((EVT, symbol_short!("set_max")), (admin, max_invoice_amount));
+    }
+
+    pub fn get_max_invoice_amount(env: Env) -> i128 {
+        bump_instance(&env);
+        env.storage()
+            .instance()
+            .get(&DataKey::MaxInvoiceAmount)
+            .expect("max invoice amount not set")
+    }
+
     pub fn get_grace_period(env: Env) -> u32 {
         bump_instance(&env);
         env.storage()
@@ -814,7 +859,7 @@ mod test {
         let admin = Address::generate(env);
         let pool = Address::generate(env);
         let sme = Address::generate(env);
-        client.initialize(&admin, &pool);
+        client.initialize(&admin, &pool, &i128::MAX);
         (client, admin, pool, sme)
     }
 
@@ -1657,5 +1702,53 @@ mod test {
             &String::from_str(&env, "h"),
         );
         assert!(id > 0);
+    }
+
+    // ---- Max Invoice Amount Tests ----
+
+    #[test]
+    #[should_panic(expected = "invoice amount exceeds maximum")]
+    fn test_create_invoice_exceeds_max_panics() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register(InvoiceContract, ());
+        let client = InvoiceContractClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        let pool = Address::generate(&env);
+        let sme = Address::generate(&env);
+
+        client.initialize(&admin, &pool, &1_000i128);
+
+        client.create_invoice(
+            &sme,
+            &String::from_str(&env, "D"),
+            &1_001i128,
+            &(env.ledger().timestamp() + 10_000),
+            &String::from_str(&env, "x"),
+            &String::from_str(&env, "h"),
+        );
+    }
+
+    #[test]
+    fn test_admin_can_update_max_invoice_amount() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, admin, _pool, _sme) = setup(&env);
+
+        assert_eq!(client.get_max_invoice_amount(), i128::MAX);
+        client.set_max_invoice_amount(&admin, &123_456i128);
+        assert_eq!(client.get_max_invoice_amount(), 123_456i128);
+    }
+
+    #[test]
+    #[should_panic(expected = "unauthorized")]
+    fn test_set_max_invoice_amount_non_admin_panics() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _admin, _pool, _sme) = setup(&env);
+
+        let intruder = Address::generate(&env);
+        client.set_max_invoice_amount(&intruder, &100i128);
     }
 }
