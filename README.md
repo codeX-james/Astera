@@ -59,6 +59,8 @@ After running this command:
 
 ### Prerequisites
 
+If you are on Windows, we strongly recommend using WSL2. See our [Windows/WSL2 Setup Guide](docs/windows-wsl-setup.md) for details.
+
 - [Rust + Cargo](https://rustup.rs/)
 - [Stellar CLI](https://developers.stellar.org/docs/tools/developer-tools/stellar-cli)
 - [Node.js 20+](https://nodejs.org/)
@@ -166,6 +168,14 @@ stellar contract invoke \
 ---
 
 ## Deployment
+
+### Frontend Deployment
+
+Deploy your own instance of the Astera frontend with one click:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/astera-hq/Astera&root-directory=frontend&env=NEXT_PUBLIC_NETWORK,NEXT_PUBLIC_INVOICE_CONTRACT_ID,NEXT_PUBLIC_POOL_CONTRACT_ID,NEXT_PUBLIC_USDC_TOKEN_ID)
+
+For detailed instructions on various hosting options, see the [Frontend Deployment Guide](docs/frontend-deployment.md).
 
 ### Testnet Deployment
 

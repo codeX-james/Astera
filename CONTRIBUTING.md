@@ -38,7 +38,7 @@ For more about Waves and how they work, visit the official docs: https://docs.dr
 
 ## 🛠 Development Environment Setup
 
-Before contributing, set up your environment as follows:
+Before contributing, set up your environment as follows. If you are using Windows, please follow the [Windows/WSL2 Setup Guide](docs/windows-wsl-setup.md).
 
 ### Required Tools
 

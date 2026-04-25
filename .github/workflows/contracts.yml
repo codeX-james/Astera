@@ -47,3 +47,14 @@ jobs:
       - name: Run contract tests (credit_score)
         working-directory: contracts/credit_score
         run: cargo test --verbose
+
+      - name: Verify WASM sizes
+        run: |
+          for f in target/wasm32-unknown-unknown/release/*.wasm; do
+            size=$(du -k "$f" | cut -f1)
+            if [ "$size" -gt 200 ]; then
+              echo "Error: $f is too large ($size KB). Maximum allowed size is 200 KB."
+              exit 1
+            fi
+            echo "$f size: ${size} KB (OK)"
+          done
