@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useStore } from '@/lib/store';
+import { Skeleton } from '@/components/Skeleton';
 import {
   getAcceptedTokens,
   getExchangeRate,
@@ -93,7 +94,11 @@ export default function AdminExchangeRatesPage() {
       <div className="p-6 bg-brand-card border border-brand-border rounded-2xl">
         <h2 className="font-semibold mb-4">Current Rates</h2>
         {loading ? (
-          <div className="h-20 animate-pulse bg-brand-dark rounded-xl" />
+          <div className="space-y-3">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
         ) : tokens.length === 0 ? (
           <p className="text-brand-muted text-sm">No tokens configured.</p>
         ) : (

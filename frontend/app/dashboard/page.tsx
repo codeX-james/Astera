@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { usePathname, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import InvoiceCard from '@/components/InvoiceCard';
+import { StatCardSkeleton, InvoiceCardSkeleton } from '@/components/Skeleton';
 import CreditScore from '@/components/CreditScore';
 import OnboardingModal, { isFirstTimeUser } from '@/components/OnboardingModal';
 import {
@@ -383,10 +384,7 @@ export default function DashboardPage() {
                 {loading ? (
                   <div className="space-y-4">
                     {[1, 2, 3].map((n) => (
-                      <div
-                        key={n}
-                        className="h-32 bg-brand-card border border-brand-border rounded-2xl animate-pulse"
-                      />
+                      <InvoiceCardSkeleton key={n} />
                     ))}
                   </div>
                 ) : invoices.length === 0 ? (

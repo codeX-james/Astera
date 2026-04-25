@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useStore } from '@/lib/store';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { StatCardSkeleton, Skeleton } from '@/components/Skeleton';
 import {
   getInvestorPosition,
   getPoolConfig,
@@ -165,7 +165,7 @@ export default function PortfolioPage() {
           disabled={loading}
           className="flex items-center gap-2 px-4 py-2 bg-brand-card border border-brand-border rounded-xl text-sm text-white hover:bg-brand-border transition-colors disabled:opacity-50"
         >
-          {loading ? <LoadingSpinner size="sm" /> : null}
+          {loading ? <span className="w-4 h-4 border-2 border-brand-gold border-t-transparent rounded-full animate-spin" /> : null}
           Refresh
         </button>
       </div>
@@ -185,8 +185,16 @@ export default function PortfolioPage() {
 
       {/* Loading skeleton */}
       {loading && rows.length === 0 && (
-        <div className="flex items-center justify-center py-24">
-          <LoadingSpinner size="lg" />
+        <div className="space-y-6">
+          <Skeleton className="h-10 w-48 rounded-lg" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </div>
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-48 rounded-2xl" />
         </div>
       )}
 

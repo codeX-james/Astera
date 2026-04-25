@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useStore } from '@/lib/store';
+import { TableRowSkeleton } from '@/components/Skeleton';
 import {
   getMultipleInvoices,
   getInvoiceCount,
@@ -156,13 +157,7 @@ export default function AdminInvoicesPage() {
             </thead>
             <tbody className="divide-y divide-brand-border">
               {loading ? (
-                [1, 2, 3].map((i) => (
-                  <tr key={i} className="animate-pulse">
-                    <td colSpan={5} className="px-6 py-8">
-                      <div className="h-4 bg-brand-dark rounded w-full" />
-                    </td>
-                  </tr>
-                ))
+                <TableRowSkeleton colSpan={5} />
               ) : invoices.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-brand-muted italic">

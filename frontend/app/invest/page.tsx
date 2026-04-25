@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { FormEvent } from 'react';
 import toast from 'react-hot-toast';
 import { useStore } from '@/lib/store';
+import { ChartSkeleton } from '@/components/Skeleton';
 import PoolStats from '@/components/PoolStats';
 import { APYCalculator } from '@/components/APYCalculator';
 import {
@@ -182,7 +183,7 @@ export default function InvestPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-6">
             {loading ? (
-              <div className="h-64 bg-brand-card border border-brand-border rounded-2xl animate-pulse" />
+              <ChartSkeleton />
             ) : poolConfig ? (
               <PoolStats
                 config={poolConfig}

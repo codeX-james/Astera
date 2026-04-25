@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useStore } from '@/lib/store';
+import { HistoryEventSkeleton } from '@/components/Skeleton';
 import {
   rpc,
   INVOICE_CONTRACT_ID,
@@ -334,10 +335,7 @@ export default function HistoryPage() {
         ) : loading ? (
           <div className="space-y-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-20 bg-brand-card border border-brand-border rounded-2xl animate-pulse"
-              />
+              <HistoryEventSkeleton key={i} />
             ))}
           </div>
         ) : events.length === 0 ? (

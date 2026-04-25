@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useStore } from '@/lib/store';
+import { Skeleton } from '@/components/Skeleton';
 import {
   getKycRequired,
   getInvestorKyc,
@@ -114,7 +115,7 @@ export default function AdminKycPage() {
           <div>
             <p className="font-semibold">KYC Requirement</p>
             <p className="text-xs text-brand-muted mt-0.5">
-              {loading ? '...' : kycRequired ? 'Currently required' : 'Currently not required'}
+              {loading ? <Skeleton className="h-4 w-24 inline-block" /> : kycRequired ? 'Currently required' : 'Currently not required'}
             </p>
           </div>
           <button

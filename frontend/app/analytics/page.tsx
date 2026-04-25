@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { StatCardSkeleton, ChartSkeleton } from '@/components/Skeleton';
 import { getPoolConfig, getAcceptedTokens, getPoolTokenTotals } from '@/lib/contracts';
 import { formatUSDC, stablecoinLabel } from '@/lib/stellar';
 import type { PoolConfig, PoolTokenTotals } from '@/lib/types';
@@ -124,16 +125,14 @@ export default function AnalyticsPage() {
         {POOL_CONFIGURED && loading && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-24 bg-brand-card border border-brand-border rounded-2xl animate-pulse"
-                />
-              ))}
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+              <StatCardSkeleton />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="h-56 bg-brand-card border border-brand-border rounded-2xl animate-pulse" />
-              <div className="h-56 bg-brand-card border border-brand-border rounded-2xl animate-pulse" />
+              <ChartSkeleton />
+              <ChartSkeleton />
             </div>
           </div>
         )}

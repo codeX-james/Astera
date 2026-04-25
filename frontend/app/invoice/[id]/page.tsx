@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { useStore } from '@/lib/store';
+import { Skeleton } from '@/components/Skeleton';
 import {
   getInvoice,
   getInvoiceMetadata,
@@ -25,7 +27,6 @@ import {
 } from '@/lib/stellar';
 import { projectedInterestStroops, formatApyPercent } from '@/lib/apy';
 import type { FundedInvoice, Invoice, InvoiceMetadata, PoolConfig } from '@/lib/types';
-import { useStore } from '@/lib/store';
 
 type InvoiceEventKind = 'created' | 'funded' | 'paid' | 'defaulted' | 'repaid';
 
@@ -320,9 +321,10 @@ export default function InvoiceDetailPage() {
     return (
       <div className="min-h-screen pt-24 px-6">
         <div className="max-w-2xl mx-auto space-y-4">
-          {[1, 2, 3].map((n) => (
-            <div key={n} className="h-24 bg-brand-card rounded-2xl animate-pulse" />
-          ))}
+          <Skeleton className="h-10 w-48 rounded-lg" />
+          <Skeleton className="h-24 rounded-2xl" />
+          <Skeleton className="h-24 rounded-2xl" />
+          <Skeleton className="h-24 rounded-2xl" />
         </div>
       </div>
     );

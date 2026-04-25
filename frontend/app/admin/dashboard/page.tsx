@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { useStore } from '@/lib/store';
+import { StatCardSkeleton, Skeleton } from '@/components/Skeleton';
 import { getPoolConfig, getInvoiceCount, getInvoice } from '@/lib/contracts';
 import { formatUSDC } from '@/lib/stellar';
 import type { Invoice } from '@/lib/types';
@@ -58,14 +59,11 @@ export default function AdminDashboardPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-10 w-48 bg-brand-card animate-pulse rounded-lg" />
+        <Skeleton className="h-10 w-48 rounded-lg" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-32 bg-brand-card animate-pulse rounded-2xl border border-brand-border"
-            />
-          ))}
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
         </div>
       </div>
     );
