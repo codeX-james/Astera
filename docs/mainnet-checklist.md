@@ -6,6 +6,8 @@ Quick reference checklist for mainnet deployment. See [Mainnet Deployment Guide]
 
 ## Pre-Deployment (Complete ALL items)
 
+- [ ] **Multi-sig required before deployment**
+
 ### Security Audit
 
 - [ ] Professional security audit completed

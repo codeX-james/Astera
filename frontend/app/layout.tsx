@@ -15,9 +15,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages, getLocale } from 'next-intl/server';
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -27,11 +33,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)]">
-        <ThemeProvider>
-          <Navbar />
-          <main>{children}</main>
-          <Toaster position="top-right" duration={5000} />
-        </ThemeProvider>
+        <NextIntlClientProvider messages={messages}>
+          <ThemeProvider>
+            <Navbar />
+            <main>{children}</main>
+            <Toaster position="top-right" duration={5000} />
+          </ThemeProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

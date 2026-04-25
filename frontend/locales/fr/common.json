@@ -1,0 +1,77 @@
+{
+  "Dashboard": {
+    "title": "Tableau de bord PME",
+    "description": "Gérez vos factures tokenisées",
+    "help": "Aide",
+    "newInvoice": "+ Nouvelle facture",
+    "connectWallet": "Connectez votre portefeuille",
+    "connectWalletDesc": "Connectez Freighter pour voir et gérer vos factures.",
+    "stats": {
+      "totalVolume": "Volume total",
+      "pending": "En attente",
+      "funded": "Financé",
+      "paid": "Payé"
+    },
+    "yourInvoices": "Vos factures",
+    "searchPlaceholder": "Rechercher par débiteur ou description...",
+    "status": {
+      "all": "Tout",
+      "pending": "En attente",
+      "funded": "Financé",
+      "paid": "Payé",
+      "defaulted": "En défaut"
+    },
+    "sort": {
+      "createdDesc": "Date de création (plus récente)",
+      "createdAsc": "Date de création (plus ancienne)",
+      "amountDesc": "Montant (le plus élevé)",
+      "dueAsc": "Date d'échéance (la plus proche)"
+    },
+    "noInvoices": "Pas encore de factures.",
+    "createFirst": "Créez votre première facture →",
+    "noMatch": "Aucune facture ne correspond à vos filtres.",
+    "clearFilters": "Effacer les filtres",
+    "loadMore": "Charger plus de factures",
+    "loadingMore": "Chargement...",
+    "showing": "Affichage de {count} {count, plural, one {facture} other {factures}}",
+    "allLoaded": "Toutes les factures chargées · {count} au total"
+  },
+  "Invest": {
+    "title": "Investir",
+    "description": "Déposez des stablecoins acceptés dans le pool Astera. Gagnez un rendement soutenu par les remboursements de factures réelles. Retirez dans le même jeton que celui que vous avez déposé.",
+    "poolNotDeployed": "Le pool n'est pas encore déployé. Déployez les contrats pour voir les données en direct.",
+    "yourPosition": "Votre position",
+    "stats": {
+      "totalDeposited": "Total déposé",
+      "availableToWithdraw": "Disponible pour le retrait",
+      "currentlyDeployed": "Actuellement déployé",
+      "totalEarned": "Total gagné"
+    },
+    "connectWallet": "Connectez votre portefeuille pour investir.",
+    "kycRequired": "Vérification KYC requise. Votre adresse n'est pas encore approuvée pour le dépôt. Contactez l'administrateur du pool pour terminer la vérification.",
+    "kycVerified": "KYC vérifié — vous êtes autorisé à déposer.",
+    "modes": {
+      "deposit": "dépôt",
+      "withdraw": "retrait"
+    },
+    "stablecoin": "Stablecoin",
+    "noTokens": "Aucun jeton configuré",
+    "amountLabel": "Montant ({token})",
+    "available": "Disponible: {amount} {token}",
+    "processing": "Traitement...",
+    "retry": "Réessayer la transaction",
+    "notes": {
+      "stablecoin": "Choisissez un stablecoin sur liste blanche ; les dépôts et les retraits utilisent ce jeton.",
+      "repayment": "Le financement et le remboursement des factures utilisent le même jeton enregistré pour cette facture.",
+      "withdrawal": "Seuls les fonds non déployés peuvent être retirés à tout moment."
+    }
+  },
+  "Navbar": {
+    "dashboard": "Tableau de bord",
+    "invest": "Investir",
+    "analytics": "Analytique",
+    "portfolio": "Portefeuille",
+    "newInvoice": "Nouvelle facture",
+    "toggleTheme": "Changer le thème"
+  }
+}

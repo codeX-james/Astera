@@ -1,0 +1,77 @@
+{
+  "Dashboard": {
+    "title": "SME Dashboard",
+    "description": "Manage your tokenized invoices",
+    "help": "Help",
+    "newInvoice": "+ New Invoice",
+    "connectWallet": "Connect your wallet",
+    "connectWalletDesc": "Connect Freighter to view and manage your invoices.",
+    "stats": {
+      "totalVolume": "Total Volume",
+      "pending": "Pending",
+      "funded": "Funded",
+      "paid": "Paid"
+    },
+    "yourInvoices": "Your Invoices",
+    "searchPlaceholder": "Search by debtor or description...",
+    "status": {
+      "all": "All",
+      "pending": "Pending",
+      "funded": "Funded",
+      "paid": "Paid",
+      "defaulted": "Defaulted"
+    },
+    "sort": {
+      "createdDesc": "Created date (newest)",
+      "createdAsc": "Created date (oldest)",
+      "amountDesc": "Amount (highest)",
+      "dueAsc": "Due date (soonest)"
+    },
+    "noInvoices": "No invoices yet.",
+    "createFirst": "Create your first invoice →",
+    "noMatch": "No invoices match your filters.",
+    "clearFilters": "Clear filters",
+    "loadMore": "Load more invoices",
+    "loadingMore": "Loading more...",
+    "showing": "Showing {count} {count, plural, one {invoice} other {invoices}}",
+    "allLoaded": "All invoices loaded · {count} total"
+  },
+  "Invest": {
+    "title": "Invest",
+    "description": "Deposit accepted stablecoins into the Astera pool. Earn yield backed by real invoice repayments. Withdraw in the same token you deposited.",
+    "poolNotDeployed": "Pool not deployed yet. Deploy contracts to see live data.",
+    "yourPosition": "Your Position",
+    "stats": {
+      "totalDeposited": "Total Deposited",
+      "availableToWithdraw": "Available to Withdraw",
+      "currentlyDeployed": "Currently Deployed",
+      "totalEarned": "Total Earned"
+    },
+    "connectWallet": "Connect your wallet to invest.",
+    "kycRequired": "KYC verification required. Your address is not yet approved to deposit. Contact the pool administrator to complete verification.",
+    "kycVerified": "KYC verified — you are approved to deposit.",
+    "modes": {
+      "deposit": "deposit",
+      "withdraw": "withdraw"
+    },
+    "stablecoin": "Stablecoin",
+    "noTokens": "No tokens configured",
+    "amountLabel": "Amount ({token})",
+    "available": "Available: {amount} {token}",
+    "processing": "Processing...",
+    "retry": "Retry transaction",
+    "notes": {
+      "stablecoin": "Choose a whitelisted stablecoin; deposits and withdrawals use that token.",
+      "repayment": "Invoice funding and repayment use the same token registered for that invoice.",
+      "withdrawal": "Only undeployed funds can be withdrawn at any time."
+    }
+  },
+  "Navbar": {
+    "dashboard": "Dashboard",
+    "invest": "Invest",
+    "analytics": "Analytics",
+    "portfolio": "Portfolio",
+    "newInvoice": "New Invoice",
+    "toggleTheme": "Toggle theme"
+  }
+}

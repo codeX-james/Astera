@@ -73,6 +73,31 @@ jobs:
         run: cargo test --test fuzz_tests --verbose
         continue-on-error: false
 
+  # ---- WASM Size Check ----
+  check-wasm-size:
+    name: Check Wasm binary sizes
+    runs-on: ubuntu-latest
+    needs: rust-contracts
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Build contracts
+        run: cargo build --target wasm32-unknown-unknown --release
+      - name: Check sizes
+        run: |
+          MAX_SIZE_BYTES=204800
+          for wasm in target/wasm32-unknown-unknown/release/*.wasm; do
+            SIZE=$(stat -c%s "$wasm")
+            echo "$wasm: $SIZE bytes"
+            if [ "$SIZE" -gt "$MAX_SIZE_BYTES" ]; then
+              echo "ERROR: $wasm exceeds limit"
+              exit 1
+            fi
+          done
+
   # ---- Frontend ----
   frontend:
     name: Frontend Build & Test

@@ -18,6 +18,7 @@
     "@stellar/freighter-api": "^6.0.1",
     "@stellar/stellar-sdk": "^14.6.1",
     "next": "^15.2.2",
+    "next-intl": "^4.9.1",
     "react": "^18",
     "react-dom": "^18",
     "react-hot-toast": "^2.6.0",

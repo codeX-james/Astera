@@ -640,3 +640,13 @@ Your Astera platform is now running on Stellar testnet!
 - [Stellar CLI Reference](https://developers.stellar.org/docs/tools/developer-tools/stellar-cli)
 - [Freighter Wallet](https://www.freighter.app/)
 - [Stellar Expert Explorer](https://stellar.expert/explorer/testnet)
+
+---
+
+## Internationalization (i18n) & RTL Support
+
+Astera supports multiple languages (currently English and French). When adding support for Right-to-Left (RTL) languages such as Arabic:
+
+1. **Mirror Layout**: Ensure that the CSS layout handles mirroring (e.g., using logical properties like `margin-inline-start`).
+2. **Font Selection**: Use fonts that support Arabic scripts and maintain readability.
+3. **Direction Attribute**: Ensure the `dir="rtl"` attribute is applied to the `<html>` tag for those locales.

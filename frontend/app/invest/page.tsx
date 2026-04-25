@@ -20,8 +20,10 @@ import {
 } from '@/lib/contracts';
 import { toStroops, formatUSDC, stablecoinLabel, USDC_TOKEN_ID } from '@/lib/stellar';
 import type { PoolTokenTotals } from '@/lib/types';
+import { useTranslations } from 'next-intl';
 
 export default function InvestPage() {
+  const t = useTranslations('Invest');
   const { wallet, poolConfig, setPoolConfig, position, setPosition } = useStore();
   const [amount, setAmount] = useState('');
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
@@ -173,11 +175,8 @@ export default function InvestPage() {
     <div className="min-h-screen pt-24 pb-16 px-6">
       <div className="max-w-5xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-1">Invest</h1>
-          <p className="text-brand-muted">
-            Deposit accepted stablecoins into the Astera pool. Earn yield backed by real invoice
-            repayments. Withdraw in the same token you deposited.
-          </p>
+          <h1 className="text-3xl font-bold mb-1">{t('title')}</h1>
+          <p className="text-brand-muted">{t('description')}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -192,24 +191,24 @@ export default function InvestPage() {
               />
             ) : (
               <div className="p-6 bg-brand-card border border-brand-border rounded-2xl text-brand-muted text-sm">
-                Pool not deployed yet. Deploy contracts to see live data.
+                {t('poolNotDeployed')}
               </div>
             )}
 
             {wallet.connected && position && selectedToken && (
               <div className="p-6 bg-brand-card border border-brand-border rounded-2xl">
-                <h2 className="text-lg font-semibold mb-1">Your Position</h2>
+                <h2 className="text-lg font-semibold mb-1">{t('yourPosition')}</h2>
                 <p className="text-xs text-brand-muted mb-4">{stablecoinLabel(selectedToken)}</p>
                 <div className="space-y-3">
                   {[
-                    { label: 'Total Deposited', value: formatUSDC(position.deposited) },
+                    { label: t('stats.totalDeposited'), value: formatUSDC(position.deposited) },
                     {
-                      label: 'Available to Withdraw',
+                      label: t('stats.availableToWithdraw'),
                       value: formatUSDC(position.available),
                       highlight: true,
                     },
-                    { label: 'Currently Deployed', value: formatUSDC(position.deployed) },
-                    { label: 'Total Earned', value: formatUSDC(position.earned), highlight: true },
+                    { label: t('stats.currentlyDeployed'), value: formatUSDC(position.deployed) },
+                    { label: t('stats.totalEarned'), value: formatUSDC(position.earned), highlight: true },
                   ].map((r) => (
                     <div key={r.label} className="flex justify-between items-center text-sm">
                       <span className="text-brand-muted">{r.label}</span>
@@ -228,20 +227,19 @@ export default function InvestPage() {
           <div className="p-6 bg-brand-card border border-brand-border rounded-2xl h-fit">
             {!wallet.connected ? (
               <div className="text-center py-12">
-                <p className="text-brand-muted">Connect your wallet to invest.</p>
+                <p className="text-brand-muted">{t('connectWallet')}</p>
               </div>
             ) : (
               <>
                 {/* #109: KYC status banner */}
                 {kycRequired && !kycApproved && (
                   <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-700/40 rounded-xl text-yellow-400 text-xs">
-                    KYC verification required. Your address is not yet approved to deposit. Contact
-                    the pool administrator to complete verification.
+                    {t('kycRequired')}
                   </div>
                 )}
                 {kycRequired && kycApproved && (
                   <div className="mb-4 p-3 bg-green-900/20 border border-green-700/40 rounded-xl text-green-400 text-xs">
-                    KYC verified — you are approved to deposit.
+                    {t('kycVerified')}
                   </div>
                 )}
 
@@ -258,14 +256,14 @@ export default function InvestPage() {
                           : 'text-brand-muted hover:text-white'
                       }`}
                     >
-                      {m}
+                      {t(`modes.${m}`)}
                     </button>
                   ))}
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm text-brand-muted mb-2">Stablecoin</label>
+                    <label className="block text-sm text-brand-muted mb-2">{t('stablecoin')}</label>
                     <select
                       value={selectedToken}
                       onChange={(e) => {
@@ -275,7 +273,7 @@ export default function InvestPage() {
                       className="w-full bg-brand-dark border border-brand-border rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-gold"
                     >
                       {acceptedTokens.length === 0 ? (
-                        <option value="">No tokens configured</option>
+                        <option value="">{t('noTokens')}</option>
                       ) : (
                         acceptedTokens.map((t) => (
                           <option key={t} value={t}>
@@ -288,7 +286,7 @@ export default function InvestPage() {
 
                   <div>
                     <label className="block text-sm text-brand-muted mb-2">
-                      Amount ({stablecoinLabel(selectedToken) || 'token'})
+                      {t('amountLabel', { token: stablecoinLabel(selectedToken) || 'token' })}
                     </label>
                     <div className="relative">
                       <input
@@ -304,7 +302,7 @@ export default function InvestPage() {
                     </div>
                     {mode === 'withdraw' && position && (
                       <p className="text-xs text-brand-muted mt-1">
-                        Available: {formatUSDC(position.available)} {stablecoinLabel(selectedToken)}
+                        {t('available', { amount: formatUSDC(position.available), token: stablecoinLabel(selectedToken) })}
                       </p>
                     )}
                   </div>
@@ -348,7 +346,7 @@ export default function InvestPage() {
                     }
                     className="w-full py-3 bg-brand-gold text-brand-dark font-semibold rounded-xl hover:bg-brand-amber transition-colors disabled:opacity-60 capitalize"
                   >
-                    {txLoading ? 'Processing...' : `${mode} ${stablecoinLabel(selectedToken)}`}
+                    {txLoading ? t('processing') : `${t(`modes.${mode}`)} ${stablecoinLabel(selectedToken)}`}
                   </button>
                   {txStatus === 'failed' && (
                     <button
@@ -357,17 +355,17 @@ export default function InvestPage() {
                       disabled={txLoading || !amount || !selectedToken}
                       className="w-full py-3 border border-brand-border text-white font-semibold rounded-xl hover:border-brand-gold/50 transition-colors disabled:opacity-60"
                     >
-                      Retry transaction
+                      {t('retry')}
                     </button>
                   )}
                 </form>
 
                 <div className="mt-6 p-4 bg-brand-dark border border-brand-border rounded-xl text-xs text-brand-muted space-y-1">
-                  <p>• Choose a whitelisted stablecoin; deposits and withdrawals use that token.</p>
+                  <p>• {t('notes.stablecoin')}</p>
                   <p>
-                    • Invoice funding and repayment use the same token registered for that invoice.
+                    • {t('notes.repayment')}
                   </p>
-                  <p>• Only undeployed funds can be withdrawn at any time.</p>
+                  <p>• {t('notes.withdrawal')}</p>
                 </div>
               </>
             )}

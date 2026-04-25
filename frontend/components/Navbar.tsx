@@ -1,23 +1,50 @@
-'use client';
+import { useTranslations, useLocale } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { setStoredLocale } from '@/lib/i18n';
 
-import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import WalletConnect from './WalletConnect';
-import ThemeToggle from './ThemeToggle';
-import NotificationBell from './NotificationBell';
+function LanguageSelector() {
+  const locale = useLocale();
+  const router = useRouter();
 
-const links = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/invest', label: 'Invest' },
-  { href: '/analytics', label: 'Analytics' },
-  { href: '/portfolio', label: 'Portfolio' },
-  { href: '/invoice/new', label: 'New Invoice' },
-];
+  const handleLanguageChange = (newLocale: string) => {
+    setStoredLocale(newLocale);
+    router.refresh();
+  };
+
+  return (
+    <div className="flex items-center gap-1 bg-brand-card border border-brand-border rounded-lg p-1">
+      <button
+        onClick={() => handleLanguageChange('en')}
+        className={`px-2 py-1 text-[10px] font-bold rounded transition-colors ${
+          locale === 'en' ? 'bg-brand-gold text-brand-dark' : 'text-brand-muted hover:text-white'
+        }`}
+      >
+        EN
+      </button>
+      <button
+        onClick={() => handleLanguageChange('fr')}
+        className={`px-2 py-1 text-[10px] font-bold rounded transition-colors ${
+          locale === 'fr' ? 'bg-brand-gold text-brand-dark' : 'text-brand-muted hover:text-white'
+        }`}
+      >
+        FR
+      </button>
+    </div>
+  );
+}
 
 export default function Navbar() {
+  const t = useTranslations('Navbar');
   const path = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const links = [
+    { href: '/dashboard', label: t('dashboard') },
+    { href: '/invest', label: t('invest') },
+    { href: '/analytics', label: t('analytics') },
+    { href: '/portfolio', label: t('portfolio') },
+    { href: '/invoice/new', label: t('newInvoice') },
+  ];
 
   // Close drawer whenever the route changes
   const prevPath = useRef(path);
@@ -72,6 +99,7 @@ export default function Navbar() {
 
           {/* Desktop theme toggle + notification bell + wallet button */}
           <div className="hidden md:flex items-center gap-2">
+            <LanguageSelector />
             <NotificationBell />
             <ThemeToggle />
             <WalletConnect />
@@ -79,6 +107,7 @@ export default function Navbar() {
 
           {/* Mobile: theme toggle + hamburger */}
           <div className="md:hidden flex items-center gap-1">
+            <LanguageSelector />
             <ThemeToggle />
             <button
               onClick={() => setDrawerOpen(true)}
@@ -175,7 +204,7 @@ export default function Navbar() {
           <WalletConnect />
           <div className="flex items-center gap-2 text-sm text-brand-muted">
             <ThemeToggle />
-            <span>Toggle theme</span>
+            <span>{t('toggleTheme')}</span>
           </div>
         </div>
       </aside>

@@ -17,25 +17,18 @@ import {
 } from '@/lib/contracts';
 import { formatUSDC } from '@/lib/stellar';
 import type { Invoice, InvoiceMetadata } from '@/lib/types';
+import { useTranslations } from 'next-intl';
 
 type DashboardRow = { invoice: Invoice; metadata: InvoiceMetadata };
 
 type StatusFilter = Invoice['status'] | 'All';
 type SortOption = 'created-desc' | 'created-asc' | 'amount-desc' | 'due-asc';
 
-const STATUS_TABS: StatusFilter[] = ['All', 'Pending', 'Funded', 'Paid', 'Defaulted'];
-
-const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: 'created-desc', label: 'Created date (newest)' },
-  { value: 'created-asc', label: 'Created date (oldest)' },
-  { value: 'amount-desc', label: 'Amount (highest)' },
-  { value: 'due-asc', label: 'Due date (soonest)' },
-];
-
 /** Number of invoices to load per page */
 const PAGE_SIZE = 20;
 
 export default function DashboardPage() {
+  const t = useTranslations('Dashboard');
   const router = useRouter();
   const pathname = usePathname();
   const { wallet } = useStore();
@@ -49,6 +42,15 @@ export default function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
   const [sort, setSort] = useState<SortOption>('created-desc');
   const [hydrated, setHydrated] = useState(false);
+
+  const STATUS_TABS: StatusFilter[] = ['All', 'Pending', 'Funded', 'Paid', 'Defaulted'];
+
+  const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+    { value: 'created-desc', label: t('sort.createdDesc') },
+    { value: 'created-asc', label: t('sort.createdAsc') },
+    { value: 'amount-desc', label: t('sort.amountDesc') },
+    { value: 'due-asc', label: t('sort.dueAsc') },
+  ];
 
   /** Total number of on-chain invoices (not just the user's) */
   const [totalOnChainCount, setTotalOnChainCount] = useState(0);
@@ -263,22 +265,22 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-1">SME Dashboard</h1>
-            <p className="text-brand-muted">Manage your tokenized invoices</p>
+            <h1 className="text-3xl font-bold mb-1">{t('title')}</h1>
+            <p className="text-brand-muted">{t('description')}</p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowOnboarding(true)}
               className="px-4 py-2 text-brand-muted hover:text-white transition-colors text-sm"
             >
-              Help
+              {t('help')}
             </button>
             {wallet.connected && (
               <Link
                 href="/invoice/new"
                 className="px-5 py-2.5 bg-brand-gold text-brand-dark font-semibold rounded-xl hover:bg-brand-amber transition-colors"
               >
-                + New Invoice
+                {t('newInvoice')}
               </Link>
             )}
           </div>
@@ -287,8 +289,8 @@ export default function DashboardPage() {
         {!wallet.connected ? (
           <div className="flex flex-col items-center justify-center py-32 text-center">
             <div className="text-4xl mb-4">◈</div>
-            <h2 className="text-xl font-semibold mb-2">Connect your wallet</h2>
-            <p className="text-brand-muted">Connect Freighter to view and manage your invoices.</p>
+            <h2 className="text-xl font-semibold mb-2">{t('connectWallet')}</h2>
+            <p className="text-brand-muted">{t('connectWalletDesc')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -297,10 +299,10 @@ export default function DashboardPage() {
               {/* Quick stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
-                  { label: 'Total Volume', value: formatUSDC(stats.totalVolume), highlight: true },
-                  { label: 'Pending', value: stats.pending.toString() },
-                  { label: 'Funded', value: stats.funded.toString() },
-                  { label: 'Paid', value: stats.paid.toString() },
+                  { label: t('stats.totalVolume'), value: formatUSDC(stats.totalVolume), highlight: true },
+                  { label: t('stats.pending'), value: stats.pending.toString() },
+                  { label: t('stats.funded'), value: stats.funded.toString() },
+                  { label: t('stats.paid'), value: stats.paid.toString() },
                 ].map((s) => (
                   <div
                     key={s.label}
@@ -316,7 +318,7 @@ export default function DashboardPage() {
 
               {/* Invoices */}
               <div ref={listRef}>
-                <h2 className="text-lg font-semibold mb-4">Your Invoices</h2>
+                <h2 className="text-lg font-semibold mb-4">{t('yourInvoices')}</h2>
 
                 {/* Search */}
                 <div className="relative mb-3">
@@ -335,7 +337,7 @@ export default function DashboardPage() {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Search by debtor or description..."
+                    placeholder={t('searchPlaceholder')}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full bg-brand-dark border border-brand-border rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-brand-muted focus:outline-none focus:border-brand-gold"
@@ -363,7 +365,7 @@ export default function DashboardPage() {
                             : 'text-brand-muted hover:text-white bg-brand-card border border-brand-border'
                         }`}
                       >
-                        {tab}
+                        {t(`status.${tab.toLowerCase()}`)}
                       </button>
                     ))}
                   </div>
@@ -389,17 +391,17 @@ export default function DashboardPage() {
                   </div>
                 ) : invoices.length === 0 ? (
                   <div className="p-12 bg-brand-card border border-brand-border rounded-2xl text-center">
-                    <p className="text-brand-muted mb-4">No invoices yet.</p>
+                    <p className="text-brand-muted mb-4">{t('noInvoices')}</p>
                     <Link
                       href="/invoice/new"
                       className="text-brand-gold hover:underline text-sm font-medium"
                     >
-                      Create your first invoice →
+                      {t('createFirst')}
                     </Link>
                   </div>
                 ) : filtered.length === 0 ? (
                   <div className="p-12 bg-brand-card border border-brand-border rounded-2xl text-center">
-                    <p className="text-brand-muted mb-3">No invoices match your filters.</p>
+                    <p className="text-brand-muted mb-3">{t('noMatch')}</p>
                     {isFiltered && (
                       <button
                         onClick={() => {
@@ -408,7 +410,7 @@ export default function DashboardPage() {
                         }}
                         className="text-brand-gold hover:underline text-sm font-medium"
                       >
-                        Clear filters
+                        {t('clearFilters')}
                       </button>
                     )}
                   </div>
@@ -436,14 +438,14 @@ export default function DashboardPage() {
                           {loadingMore ? (
                             <span className="flex items-center justify-center gap-2">
                               <span className="w-4 h-4 border-2 border-brand-gold border-t-transparent rounded-full animate-spin" />
-                              Loading more...
+                              {t('loadingMore')}
                             </span>
                           ) : (
-                            `Load more invoices`
+                            t('loadMore')
                           )}
                         </button>
                         <p className="text-xs text-brand-muted mt-2">
-                          Showing {invoices.length} invoice{invoices.length !== 1 ? 's' : ''}
+                          {t('showing', { count: invoices.length })}
                           {totalOnChainCount > 0 &&
                             ` · Scanned ${scannedCount} of ${totalOnChainCount} on-chain`}
                         </p>
@@ -452,7 +454,7 @@ export default function DashboardPage() {
 
                     {!hasMore && invoices.length > 0 && (
                       <p className="text-xs text-brand-muted text-center mt-4">
-                        All invoices loaded · {invoices.length} total
+                        {t('allLoaded', { count: invoices.length })}
                       </p>
                     )}
                   </>
