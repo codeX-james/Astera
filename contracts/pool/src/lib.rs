@@ -144,6 +144,8 @@ pub enum DataKey {
     // Collateral: threshold config and per-invoice deposits
     CollateralConfig,
     CollateralDeposit(u64),
+
+    ReentrancyGuard,
 }
 
 const EVT: Symbol = symbol_short!("POOL");
@@ -559,19 +561,17 @@ impl FundingPool {
         }
         Self::assert_accepted_token(&env, &token);
 
-        // Batch read: get share token and token totals
+        Self::non_reentrant_start(&env); // <- ADD GUARD START
+
         let share_token_key = DataKey::ShareToken(token.clone());
         let token_totals_key = DataKey::TokenTotals(token.clone());
-
         let share_token: Address = env.storage().instance().get(&share_token_key).unwrap();
-
         let mut tt: PoolTokenTotals = env
             .storage()
             .instance()
             .get(&token_totals_key)
             .unwrap_or_default();
 
-        // Batch external calls: get balance and total supply
         let mut bal_args = Vec::new(&env);
         bal_args.push_back(investor.clone().into_val(&env));
         let share_balance: i128 =
@@ -586,26 +586,27 @@ impl FundingPool {
             Vec::new(&env),
         );
 
-        // Calculate amount and check liquidity
         let amount = (shares * tt.pool_value) / total_shares;
         let available_liquidity = tt.pool_value - tt.total_deployed;
         if available_liquidity < amount {
             panic!("insufficient available liquidity");
         }
 
-        // Burn shares
+        // Burn shares FIRST - effects
         let mut burn_args = Vec::new(&env);
         burn_args.push_back(investor.clone().into_val(&env));
         burn_args.push_back(shares.into_val(&env));
         let _: () = env.invoke_contract(&share_token, &Symbol::new(&env, "burn"), burn_args);
 
-        // Update pool value and write once
+        // Update state SECOND - effects
         tt.pool_value -= amount;
         env.storage().instance().set(&token_totals_key, &tt);
 
-        // Transfer tokens
+        // Transfer LAST - interaction
         let token_client = token::Client::new(&env, &token);
         token_client.transfer(&env.current_contract_address(), &investor, &amount);
+
+        Self::non_reentrant_end(&env); // <- ADD GUARD END
 
         env.events()
             .publish((EVT, symbol_short!("withdraw")), (investor, amount, shares));
@@ -720,7 +721,8 @@ impl FundingPool {
             panic!("payment amount must be positive");
         }
 
-        // Batch read: get config and funded invoice record
+        Self::non_reentrant_start(&env); // <- ADD GUARD START
+
         let config: PoolConfig = get_config_cached(&env);
         let funded_invoice_key = DataKey::FundedInvoice(invoice_id);
         let mut record: FundedInvoice = env
@@ -729,7 +731,6 @@ impl FundingPool {
             .get(&funded_invoice_key)
             .expect("invoice not found");
 
-        // Calculate total due (principal + interest + factoring fee)
         let now = env.ledger().timestamp();
         let elapsed_secs = now - record.funded_at;
         let total_interest = calculate_interest(
@@ -740,26 +741,17 @@ impl FundingPool {
         );
         let total_due = record.principal + total_interest as i128 + record.factoring_fee;
 
-        // Check if already fully repaid
         if record.repaid_amount >= total_due {
             panic!("invoice already fully repaid");
         }
-
-        // Check if payment would exceed total due
         if record.repaid_amount + amount > total_due {
             panic!("payment exceeds total due");
         }
 
-        // Transfer payment
-        let token_client = token::Client::new(&env, &record.token);
-        token_client.transfer(&payer, &env.current_contract_address(), &amount);
-
-        // Update repaid amount
+        // Update state FIRST - effects
         record.repaid_amount += amount;
-
         let fully_repaid = record.repaid_amount >= total_due;
 
-        // Batch read: get token totals and stats
         let token_totals_key = DataKey::TokenTotals(record.token.clone());
         let mut tt: PoolTokenTotals = env
             .storage()
@@ -773,16 +765,15 @@ impl FundingPool {
             .get(&DataKey::StorageStats)
             .unwrap_or_default();
 
-        // Only update pool totals when fully repaid
         if fully_repaid {
             tt.total_deployed -= record.principal;
-            tt.pool_value += total_interest as i128; // yield added back to pool NAV
+            tt.pool_value += total_interest as i128;
             tt.total_fee_revenue += record.factoring_fee;
             tt.total_paid_out += total_due;
             stats.active_funded_invoices = stats.active_funded_invoices.saturating_sub(1);
         }
 
-        // Batch write: update all storage at once
+        // Write all state BEFORE external call
         env.storage().persistent().set(&funded_invoice_key, &record);
         if fully_repaid {
             set_funded_invoice_ttl(&env, invoice_id, true);
@@ -790,20 +781,11 @@ impl FundingPool {
         env.storage().instance().set(&token_totals_key, &tt);
         env.storage().instance().set(&DataKey::StorageStats, &stats);
 
-        if fully_repaid {
-            env.events().publish(
-                (EVT, symbol_short!("repaid")),
-                (invoice_id, record.principal, total_interest as i128),
-            );
-        } else {
-            // Emit partial repayment event
-            env.events().publish(
-                (EVT, symbol_short!("part_pay")),
-                (invoice_id, amount, record.repaid_amount),
-            );
-        }
+        // Transfer LAST - interaction
+        let token_client = token::Client::new(&env, &record.token);
+        token_client.transfer(&payer, &env.current_contract_address(), &amount);
 
-        // Release collateral back to depositor if any was locked for this invoice (only when fully repaid)
+        // Handle collateral release after main transfer
         if fully_repaid {
             if let Some(mut col) = env
                 .storage()
@@ -827,6 +809,20 @@ impl FundingPool {
                     );
                 }
             }
+        }
+
+        Self::non_reentrant_end(&env); // <- ADD GUARD END
+
+        if fully_repaid {
+            env.events().publish(
+                (EVT, symbol_short!("repaid")),
+                (invoice_id, record.principal, total_interest as i128),
+            );
+        } else {
+            env.events().publish(
+                (EVT, symbol_short!("part_pay")),
+                (invoice_id, amount, record.repaid_amount),
+            );
         }
     }
 
@@ -1258,13 +1254,7 @@ impl FundingPool {
     /// Used to normalise pool value across stablecoins for display/reporting.
     /// Oracle-backed validation is a planned follow-up; for now the admin must
     /// set explicit per-token bounds before changing a rate.
-    pub fn set_rate_bounds(
-        env: Env,
-        admin: Address,
-        token: Address,
-        min_bps: u32,
-        max_bps: u32,
-    ) {
+    pub fn set_rate_bounds(env: Env, admin: Address, token: Address, min_bps: u32, max_bps: u32) {
         admin.require_auth();
         bump_instance(&env);
         Self::require_admin(&env, &admin);
@@ -1413,6 +1403,26 @@ impl FundingPool {
         env.deployer().update_current_contract_wasm(wasm_hash);
         env.events()
             .publish((EVT, symbol_short!("upgraded")), (admin, now));
+    }
+
+    // ---- Internal utility methods ----
+    fn non_reentrant_start(env: &Env) {
+        let key = DataKey::ReentrancyGuard;
+        if env
+            .storage()
+            .instance()
+            .get::<DataKey, bool>(&key)
+            .unwrap_or(false)
+        {
+            panic!("reentrant call");
+        }
+        env.storage().instance().set(&key, &true);
+    }
+
+    fn non_reentrant_end(env: &Env) {
+        env.storage()
+            .instance()
+            .set(&DataKey::ReentrancyGuard, &false);
     }
 }
 
@@ -1925,7 +1935,7 @@ mod test {
             &usdc_id,
         );
         let fi = client.get_funded_invoice(&1u64).unwrap();
-        assert!(!fi.repaid);
+        assert_eq!(fi.repaid_amount, 0i128);
     }
 
     #[test]
@@ -1991,7 +2001,7 @@ mod test {
             &usdc_id,
         );
         let fi = client.get_funded_invoice(&1u64).unwrap();
-        assert!(!fi.repaid);
+        assert_eq!(fi.repaid_amount, 0i128);
     }
 
     #[test]
@@ -2297,7 +2307,12 @@ mod test {
 
     #[test]
     fn test_yield_calc_no_overflow_large_principal() {
-        let interest = calculate_interest(1_000_000_000_000_000u128, 5_000u32, 5 * SECS_PER_YEAR, false);
+        let interest = calculate_interest(
+            1_000_000_000_000_000u128,
+            5_000u32,
+            5 * SECS_PER_YEAR,
+            false,
+        );
         assert!(interest > 0);
         assert!(interest < 3_000_000_000_000_000u128);
     }
