@@ -1,9 +1,15 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short, Address, BytesN, Env, String, Symbol,
-    Vec,
+    contract, contractimpl, contracttype, symbol_short, Address, BytesN, Env, String, Symbol, Vec,
 };
+
+use soroban_sdk::contractclient;
+
+#[contractclient(name = "PoolClient")]
+pub trait PoolContract {
+    fn is_invoice_repaid(env: Env, invoice_id: u64) -> bool;
+}
 
 const LEDGERS_PER_DAY: u32 = 17_280;
 const ACTIVE_INVOICE_TTL: u32 = LEDGERS_PER_DAY * 365;
@@ -243,10 +249,9 @@ impl InvoiceContract {
         env.storage()
             .instance()
             .set(&DataKey::MaxInvoiceAmount, &max_invoice_amount);
-        env.storage().instance().set(
-            &DataKey::ExpirationDurationSecs,
-            &expiration_duration_secs,
-        );
+        env.storage()
+            .instance()
+            .set(&DataKey::ExpirationDurationSecs, &expiration_duration_secs);
         bump_instance(&env);
     }
 
@@ -440,7 +445,9 @@ impl InvoiceContract {
             panic!("daily invoice limit too high");
         }
 
-        env.storage().instance().set(&DataKey::DailyInvoiceLimit, &limit);
+        env.storage()
+            .instance()
+            .set(&DataKey::DailyInvoiceLimit, &limit);
         env.events()
             .publish((EVT, symbol_short!("set_limit")), (admin, limit));
     }
@@ -586,21 +593,19 @@ impl InvoiceContract {
         env.events().publish((EVT, symbol_short!("funded")), id);
     }
 
-    pub fn mark_paid(env: Env, id: u64, caller: Address) {
-        caller.require_auth();
+    pub fn mark_paid(env: Env, id: u64, pool: Address) {
+        pool.require_auth();
         require_not_paused(&env);
         bump_instance(&env);
 
-        let pool: Address = env
+        let authorized_pool: Address = env
             .storage()
             .instance()
             .get(&DataKey::Pool)
             .expect("not initialized");
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .expect("not initialized");
+        if pool != authorized_pool {
+            panic!("unauthorized: only pool can mark paid");
+        }
 
         let mut invoice: Invoice = env
             .storage()
@@ -608,11 +613,14 @@ impl InvoiceContract {
             .get(&DataKey::Invoice(id))
             .expect("invoice not found");
 
-        if caller != invoice.owner && caller != pool && caller != admin {
-            panic!("unauthorized");
-        }
         if invoice.status != InvoiceStatus::Funded {
             panic!("invoice is not funded");
+        }
+
+        // CRITICAL: Verify with pool that repayment actually occurred
+        let pool_client = PoolClient::new(&env, &pool);
+        if !pool_client.is_invoice_repaid(&id) {
+            panic!("repayment not verified by pool contract");
         }
 
         invoice.status = InvoiceStatus::Paid;
@@ -886,10 +894,9 @@ impl InvoiceContract {
         if expiration_duration_secs == 0 {
             panic!("expiration duration must be non-zero");
         }
-        env.storage().instance().set(
-            &DataKey::ExpirationDurationSecs,
-            &expiration_duration_secs,
-        );
+        env.storage()
+            .instance()
+            .set(&DataKey::ExpirationDurationSecs, &expiration_duration_secs);
         env.events().publish(
             (EVT, symbol_short!("set_exp")),
             (admin, expiration_duration_secs),
@@ -2008,5 +2015,95 @@ mod test {
         env.ledger().with_mut(|l| l.timestamp += 2);
 
         client.mark_funded(&id, &pool);
+    }
+
+    #[test]
+    #[should_panic(expected = "unauthorized: only pool can mark paid")]
+    fn test_mark_paid_by_owner_panics() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _admin, pool, sme) = setup(&env);
+        let hash = String::from_str(&env, "h");
+
+        let id = client.create_invoice(
+            &sme,
+            &String::from_str(&env, "D"),
+            &1_000i128,
+            &(env.ledger().timestamp() + 10_000),
+            &String::from_str(&env, "x"),
+            &hash,
+        );
+        client.mark_funded(&id, &pool);
+
+        // SME should no longer be able to mark paid
+        client.mark_paid(&id, &sme);
+    }
+
+    #[test]
+    #[should_panic(expected = "unauthorized: only pool can mark paid")]
+    fn test_mark_paid_by_admin_panics() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, admin, pool, sme) = setup(&env);
+        let hash = String::from_str(&env, "h");
+
+        let id = client.create_invoice(
+            &sme,
+            &String::from_str(&env, "D"),
+            &1_000i128,
+            &(env.ledger().timestamp() + 10_000),
+            &String::from_str(&env, "x"),
+            &hash,
+        );
+        client.mark_funded(&id, &pool);
+
+        // Admin should no longer be able to mark paid
+        client.mark_paid(&id, &admin);
+    }
+
+    #[test]
+    #[should_panic(expected = "repayment not verified by pool contract")]
+    fn test_mark_paid_without_pool_verification_panics() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        // Register mock pool that returns false for is_invoice_repaid
+        let pool_id = env.register(MockPoolFalse, ());
+        let contract_id = env.register(InvoiceContract, ());
+        let client = InvoiceContractClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        let sme = Address::generate(&env);
+
+        client.initialize(
+            &admin,
+            &pool_id,
+            &i128::MAX,
+            &DEFAULT_EXPIRATION_DURATION_SECS,
+        );
+        let hash = String::from_str(&env, "h");
+
+        let id = client.create_invoice(
+            &sme,
+            &String::from_str(&env, "D"),
+            &1_000i128,
+            &(env.ledger().timestamp() + 10_000),
+            &String::from_str(&env, "x"),
+            &hash,
+        );
+        client.mark_funded(&id, &pool_id);
+
+        // Pool tries to mark paid but repayment not verified -> panic
+        client.mark_paid(&id, &pool_id);
+    }
+
+    // You'll need a mock pool contract for testing:
+    #[contract]
+    struct MockPoolFalse;
+
+    #[contractimpl]
+    impl MockPoolFalse {
+        pub fn is_invoice_repaid(_env: Env, _invoice_id: u64) -> bool {
+            false
+        }
     }
 }
